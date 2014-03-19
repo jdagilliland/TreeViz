@@ -4,7 +4,7 @@ import csv
 import ete2
 import numpy as np
 
-def print_tree(fname, **kwopts):
+def print_tree(fname, **kwarg):
     """
     Print a tree read from a `fname`.
 
@@ -12,12 +12,31 @@ def print_tree(fname, **kwopts):
     ----------
     fname : str
         The file name to use to print the tree from.
+    tabfile : str, optional
+        The name of the tabfile to use for coloring.
+    column : str, optional
+        The heading of the title to use to color the graph.
+        (default: 'COLOR_GROUP')
 
     Returns
     -------
     None
     """
+    treestyle = ete2.TreeStyle()
+    treestyle.show_leaf_name = True
+    treestyle.title.add_face(ete2.TextFace(fname), column=0)
+    
     tree = ete2.Tree(fname)
+    # tabfile really may be a better positional arg
+    tabfile = kwarg.pop('tabfile', None)
+    if tabfile == None:
+        raise Exception
+    # if column specified: use, otherwise default
+    column = kwarg.pop('column','COLOR_GROUP')
+    
+    # color nodes
+    color_nodes(tree, tabfile, column)
+    tree.show()
     return None
 
 def color_nodes(tree, tabfile, column, dict_color=None):
@@ -72,12 +91,9 @@ def _get_node_entry(nodename, lst_dict_entries):
 
 def _get_color_dict(lst_col_data):
     set_data = set(lst_col_data)
-    print(len(set_data))
-#    dict_color = dict((data, ete2.random_color()) for data in set_data)
     dict_color = dict()
     for data in set_data:
         dict_color[data] = _random_color()
-    print(dict_color)
     return dict_color
 
 def _random_color():
@@ -88,3 +104,15 @@ def _color_3pl2hex(tpl_color):
     hex_color = '#' + ''.join([hex(int(256*iI))[-2:] for iI in tpl_color])
     return hex_color
 
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(
+        description='Visualize newick trees',
+        )
+    parser.add_argument('treefile',
+#        nargs=1,
+#        dest='treefile',
+        )
+    parser.add_argument('-t', '--tabfile', dest='tabfile')
+    argspace = parser.parse_args()
+    print_tree(argspace.treefile, tabfile=argspace.tabfile)
