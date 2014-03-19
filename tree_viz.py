@@ -87,6 +87,7 @@ def color_nodes(tree, tabfile, column, dict_color=None):
         node.color = color
         style = ete2.NodeStyle()
         style['fgcolor'] = color
+        style['size'] = 10
         node.set_style(style)
     return tree
 
