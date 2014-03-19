@@ -17,6 +17,9 @@ def print_tree(fname, **kwarg):
     column : str, optional
         The heading of the title to use to color the graph.
         (default: 'COLOR_GROUP')
+    outfile : str, optional
+        If provided, renders the tree to an image file, rather than
+        displaying it in the GUI.
 
     Returns
     -------
@@ -36,7 +39,12 @@ def print_tree(fname, **kwarg):
     
     # color nodes
     color_nodes(tree, tabfile, column)
-    tree.show()
+    # if outfile specified, use, otherwise just show
+    outfile = kwarg.pop('outfile',None)
+    if outfile:
+        tree.render(outfile, w=600, tree_style=treestyle)
+    else:
+        tree.show()
     return None
 
 def color_nodes(tree, tabfile, column, dict_color=None):
@@ -114,5 +122,9 @@ if __name__ == '__main__':
 #        dest='treefile',
         )
     parser.add_argument('-t', '--tabfile', dest='tabfile')
+    parser.add_argument('-r', '--render', dest='outfile', default=None)
     argspace = parser.parse_args()
-    print_tree(argspace.treefile, tabfile=argspace.tabfile)
+    print_tree(argspace.treefile,
+        tabfile=argspace.tabfile,
+        outfile=argspace.outfile,
+        )
