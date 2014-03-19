@@ -2,6 +2,7 @@
 import csv
 
 import ete2
+import numpy as np
 
 def print_tree(fname, **kwopts):
     """
@@ -43,14 +44,15 @@ def color_nodes(tree, tabfile, column, dict_color=None):
         The colored `tree`.
 
     """
-    if dict_color == None:
-        dict_color = _get_color_dict()
     with open(tabfile,'rb') as f:
         reader = csv.DictReader(f,delimiter='\t')
         lst_dict_entries = [row for row in reader]
+    if dict_color == None:
+        column_data = [entry.get(column) for entry in lst_dict_entries]
+        dict_color = _get_color_dict(column_data)
     for node in tree.traverse():
         try:
-            dict_entry = get_node_entry(node.name, lst_dict_entries)
+            dict_entry = _get_node_entry(node.name, lst_dict_entries)
         except ValueError:
             continue
         column_data = dict_entry.get(column)
@@ -70,5 +72,19 @@ def _get_node_entry(nodename, lst_dict_entries):
 
 def _get_color_dict(lst_col_data):
     set_data = set(lst_col_data)
-    return dict((data, ete2.random_color()) for data in set_data)
-    
+    print(len(set_data))
+#    dict_color = dict((data, ete2.random_color()) for data in set_data)
+    dict_color = dict()
+    for data in set_data:
+        dict_color[data] = _random_color()
+    print(dict_color)
+    return dict_color
+
+def _random_color():
+    tpl_color = np.random.rand(3,)
+    return _color_3pl2hex(tpl_color)
+
+def _color_3pl2hex(tpl_color):
+    hex_color = '#' + ''.join([hex(int(256*iI))[-2:] for iI in tpl_color])
+    return hex_color
+
