@@ -28,6 +28,9 @@ def print_tree(fname, **kwarg):
     treestyle = ete2.TreeStyle()
     treestyle.show_leaf_name = True
     treestyle.title.add_face(ete2.TextFace(fname), column=0)
+    treestyle.force_topology = True
+    treestyle.rotation = 90
+    treestyle.show_branch_length = True
     
     tree = ete2.Tree(fname)
     # tabfile really may be a better positional arg
@@ -44,7 +47,7 @@ def print_tree(fname, **kwarg):
     if outfile:
         tree.render(outfile, w=600, tree_style=treestyle)
     else:
-        tree.show()
+        tree.show(tree_style=treestyle)
     return None
 
 def color_nodes(tree, tabfile, column, dict_color=None):
