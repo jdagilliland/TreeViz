@@ -29,7 +29,7 @@ def print_tree(fname, **kwarg):
     treestyle.show_leaf_name = True
     treestyle.title.add_face(ete2.TextFace(fname), column=0)
     treestyle.force_topology = True
-    treestyle.rotation = 90
+    treestyle.rotation = 0
     treestyle.show_branch_length = True
     
     tree = ete2.Tree(fname)
