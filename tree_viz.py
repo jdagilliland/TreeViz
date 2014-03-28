@@ -127,8 +127,10 @@ if __name__ == '__main__':
         )
     parser.add_argument('-t', '--tabfile', dest='tabfile')
     parser.add_argument('-r', '--render', dest='outfile', default=None)
+    parser.add_argument('-c', '--column', dest='column', default=None)
     argspace = parser.parse_args()
     print_tree(argspace.treefile,
         tabfile=argspace.tabfile,
         outfile=argspace.outfile,
+        column=argspace.column,
         )
