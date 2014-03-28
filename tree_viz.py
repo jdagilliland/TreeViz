@@ -31,6 +31,8 @@ def print_tree(fname, **kwarg):
     treestyle.force_topology = True
     treestyle.rotation = 0
     treestyle.show_branch_length = True
+    treestyle.show_leaf_name = False
+    treestyle.layout_fn = _internal_layout
     
     tree = ete2.Tree(fname)
     # tabfile really may be a better positional arg
@@ -93,6 +95,17 @@ def color_nodes(tree, tabfile, column, dict_color=None):
         style['size'] = 10
         node.set_style(style)
     return tree
+
+def _internal_layout(node):
+    if node.is_leaf():
+         # If terminal node, draws its name
+         name_face = ete2.AttrFace("name")
+    else:
+         # If internal node, draws label with smaller font size
+         name_face = ete2.AttrFace("name")
+    # Adds the name face to the image at the preferred position
+    ete2.faces.add_face_to_node(name_face, node, column=0,
+        position="branch-right")
 
 def _get_node_entry(nodename, lst_dict_entries):
     for dict_entry in lst_dict_entries:
