@@ -3,6 +3,7 @@ import csv
 
 import ete2
 import numpy as np
+import Bio
 
 def print_tree(fname, **kwarg):
     """
@@ -51,6 +52,63 @@ def print_tree(fname, **kwarg):
     else:
         tree.show(tree_style=treestyle)
     return None
+
+def nwk2nkx(fname):
+    """
+    Loads a Newick tree from `fname` into a networkx DiGraph.
+
+    Parameters
+    ----------
+    fname : str
+        The file name to use to print the tree from.
+
+    Returns
+    -------
+    nkx_tree : networkx.DiGraph
+        The networkx tree.
+    """
+    phylo_tree = Bio.Phylo.read(fname,'newick')
+    nkx_tree = Bio.Phylo.to_networkx(phylo_tree)
+    return nkx_tree
+
+def cleanup_tree(nkx_tree):
+    """
+    Cleans up a networkx tree (`nkx_tree`) made from a PHYLIP generated
+    Newick tree.
+    This includes:
+
+        - Collapsing branches of 0 distance.
+        - Placing the germline node at the root.
+
+    Parameters
+    ----------
+    nkx_tree : networkx.DiGraph instance.
+        The networkx tree read straight from the raw PHYLIP generated tree.
+
+    Returns
+    -------
+    clean_tree : networkx.DiGraph
+        The cleaned networkx tree.
+    """
+    # no-op so far
+    return clean_tree
+
+def _collapse_null_branches(nkx_tree):
+    """
+    Collapses 0 distance branches of a networkx tree (`nkx_tree`).
+
+    Parameters
+    ----------
+    nkx_tree : networkx.DiGraph instance.
+        The networkx tree read straight from the raw PHYLIP generated tree.
+
+    Returns
+    -------
+    collapsed_tree : networkx.DiGraph
+        The collapsed branch networkx tree.
+    """
+    # no-op so far
+    return collapsed_tree
 
 def color_nodes(tree, tabfile, column, dict_color=None):
     """
