@@ -136,8 +136,11 @@ def color_nodes(tree, tabfile, column, dict_color=None):
 
     Returns
     -------
-    tree : ete2.tree.TreeNode
-        The colored `tree`.
+    dict_color : dict
+        The dictionary of colors used in the colorization of the tree.
+        This is especially useful if it was not specified as an input
+        argument, because otherwise one has no way to know how to
+        correlate colors on the plot with the values they color.
 
     """
     with open(tabfile,'rb') as f:
@@ -158,7 +161,7 @@ def color_nodes(tree, tabfile, column, dict_color=None):
         style['fgcolor'] = color
         style['size'] = 50
         node.set_style(style)
-    return tree
+    return dict_color
 
 def _internal_layout(node):
     if node.is_leaf():
