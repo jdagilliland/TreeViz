@@ -237,11 +237,13 @@ def _scale_size(size,
 
 def _internal_layout(node):
     if node.is_leaf():
-         # If terminal node, draws its name
-         name_face = ete2.AttrFace("name")
+        # If terminal node, draws its name
+        name_face = ete2.AttrFace("name")
+    elif node.name == 'NoName' or not node.name:
+        return None
     else:
-         # If internal node, draws label with smaller font size
-         name_face = ete2.AttrFace("name")
+        # If internal node, draws label with smaller font size
+        name_face = ete2.AttrFace("name")
     # Adds the name face to the image at the preferred position
     ete2.faces.add_face_to_node(name_face, node, column=0,
         position="branch-right")
