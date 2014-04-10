@@ -48,14 +48,16 @@ def print_tree(fname, **kwarg):
     treestyle.show_leaf_name = False
     treestyle.mode = 'c'
     treestyle.layout_fn = _internal_layout
+    treestyle.legend_position = 1
     
     tree = ete2.Tree(fname)
     
     # color, size nodes
-    format_nodes(tree, tabfile,
+    dict_color = format_nodes(tree, tabfile,
             color_column=color_column,
             size_column=size_column,
             )
+    _add_legend(treestyle, dict_color)
     # if outfile specified, use, otherwise just show
     outfile = kwarg.pop('outfile',None)
     if outfile:
@@ -187,6 +189,21 @@ def format_nodes(tree, tabfile,
         style['size'] = _scale_size(int(size))
         node.set_style(style)
     return dict_color
+
+def _add_legend(treestyle, dict_legend, legend_field=None):
+    """
+    Add an informative legend to the treestyle based on the dictionary
+    of information used to color the tree.
+
+    Returns
+    -------
+    None
+    """
+    basesize = 20
+    for data, color in dict_legend.items():
+        treestyle.legend.add_face(ete2.CircleFace(basesize, color), column=1)
+        treestyle.legend.add_face(ete2.TextFace(data), column=0)
+    return None
 
 def _scale_size(size,
         **kwarg):
