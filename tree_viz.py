@@ -163,6 +163,37 @@ def color_nodes(tree, tabfile, column, dict_color=None):
         node.set_style(style)
     return dict_color
 
+def _scale_size(size,
+        **kwarg,
+        ):
+    """
+    Scale raw size data on a linear scale to a log scale (or not).
+
+    Parameters
+    ----------
+    size : float
+        The raw size data on a linear scale.
+    logscale : bool, optional
+        Boolean whether or not to log scale.
+        Set `False` to leave in linear scale.
+        (default: `True`)
+    basesize : float, optional
+        The size of a node with representing a single copy number clone.
+        (default: 20)
+
+    Notes
+    -----
+    This function also works on arrays of size data, which might be
+    useful when economizing code.
+    """
+    logscale = kwarg.pop('logscale', True)
+    basesize = kwarg.pop('basesize', 20)
+    if logscale:
+        size = basesize * (1 + np.log(size))
+    else:
+        size = basesize * size
+    return size
+
 def _internal_layout(node):
     if node.is_leaf():
          # If terminal node, draws its name
