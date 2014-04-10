@@ -34,7 +34,7 @@ def print_tree(fname, **kwarg):
     treestyle.show_branch_length = True
     treestyle.show_leaf_name = False
     treestyle.mode = 'c'
-#    treestyle.layout_fn = _internal_layout
+    treestyle.layout_fn = _internal_layout
     
     tree = ete2.Tree(fname)
     # tabfile really may be a better positional arg
@@ -50,8 +50,8 @@ def print_tree(fname, **kwarg):
     outfile = kwarg.pop('outfile',None)
     if outfile:
         tree.render(outfile, 
-                w=841,
-                h=1189,
+#                w=841,
+#                h=1189,
                 units='mm',
                 tree_style=treestyle,
                 )
