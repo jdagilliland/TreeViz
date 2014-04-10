@@ -253,11 +253,25 @@ def _get_node_entry(nodename, lst_dict_entries):
         else: continue
     raise ValueError('Nodename {name} not found'.format(name=nodename))
 
+default_color_list = [
+        '#ff0000',
+        '#0000ff',
+        '#00ff00',
+        '#7f7f00',
+        '#007f7f',
+        '#7f007f',
+        ]
+
 def _get_color_dict(lst_col_data):
     set_data = set(lst_col_data)
+    n_data = len(set_data)
+    n_rand = n_data - len(default_color_list)
+    lst_color = default_color_list
+    for iI in range(n_rand):
+        lst_color.append(_random_color())
     dict_color = dict()
-    for data in set_data:
-        dict_color[data] = _random_color()
+    for iI, data in enumerate(set_data):
+        dict_color[data] = lst_color[iI]
     return dict_color
 
 def _random_color():
