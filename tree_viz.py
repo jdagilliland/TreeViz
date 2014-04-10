@@ -188,9 +188,9 @@ def _scale_size(size,
     logscale = kwarg.pop('logscale', True)
     basesize = kwarg.pop('basesize', 20)
     if logscale:
-        size = basesize * (1 + np.log(size))
+        size = int(basesize * (1 + np.log(size)))
     else:
-        size = basesize * size
+        size = int(basesize * size)
     return size
 
 def _internal_layout(node):
