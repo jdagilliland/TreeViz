@@ -15,9 +15,12 @@ def print_tree(fname, **kwarg):
         The file name to use to print the tree from.
     tabfile : str, optional
         The name of the tabfile to use for coloring.
-    column : str, optional
-        The heading of the title to use to color the graph.
+    color_column : str, optional
+        The heading of the tabfile to use to color the graph.
         (default: 'COLOR_GROUP')
+    size_column : str, optional
+        The heading of the tabfile to use to size the nodes.
+        (default: 'COPY_NUMBER')
     outfile : str, optional
         If provided, renders the tree to an image file, rather than
         displaying it in the GUI.
@@ -26,6 +29,16 @@ def print_tree(fname, **kwarg):
     -------
     None
     """
+    ## parse kwarg
+    # tabfile really may be a better positional arg
+    tabfile = kwarg.pop('tabfile', None)
+    if tabfile == None:
+        raise Exception('No tabfile provided.')
+    # if color_column specified: use, otherwise default
+    color_column = kwarg.pop('color_column','COLOR_GROUP')
+    # if size_column specified: use, otherwise default
+    size_column = kwarg.pop('size_column','COPY_NUMBER')
+    
     treestyle = ete2.TreeStyle()
     treestyle.show_leaf_name = True
     treestyle.title.add_face(ete2.TextFace(fname), column=0)
@@ -37,15 +50,12 @@ def print_tree(fname, **kwarg):
     treestyle.layout_fn = _internal_layout
     
     tree = ete2.Tree(fname)
-    # tabfile really may be a better positional arg
-    tabfile = kwarg.pop('tabfile', None)
-    if tabfile == None:
-        raise Exception('No tabfile provided.')
-    # if column specified: use, otherwise default
-    column = kwarg.pop('column','COLOR_GROUP')
     
-    # color nodes
-    color_nodes(tree, tabfile, column)
+    # color, size nodes
+    format_nodes(tree, tabfile,
+            color_column=color_column,
+            size_column=size_column,
+            )
     # if outfile specified, use, otherwise just show
     outfile = kwarg.pop('outfile',None)
     if outfile:
@@ -116,7 +126,11 @@ def _collapse_null_branches(nkx_tree):
     # no-op so far
     return collapsed_tree
 
-def color_nodes(tree, tabfile, column, dict_color=None):
+def format_nodes(tree, tabfile,
+        color_column=None,
+        size_column=None,
+        dict_color=None,
+        ):
     """
     Color nodes of `tree` according to data in `tabfile`.
 
@@ -126,13 +140,19 @@ def color_nodes(tree, tabfile, column, dict_color=None):
         The tree to color.
     tabfile : str
         The filename of the `tabfile` from which to draw data.
-    column : str
-        A string to indicate the column of the `tabfile` to use.
+    color_column : str, optional
+        A string to indicate the column of the `tabfile` to use for
+        coloration.
+        (default: None)
+    size_column : str, optional
+        A string to indicate the column of the `tabfile` to use to
+        determine node size.
+        (default: None)
     dict_color : dict, optional
         A dictionary of colors to use based on the values in the
-        selected `column`.
+        selected `color_column`.
         If not provided, a default dictionary of appropriately spaced colors
-        will be constructed for all values found in `column`.
+        will be constructed for all values found in `color_column`.
 
     Returns
     -------
@@ -147,19 +167,24 @@ def color_nodes(tree, tabfile, column, dict_color=None):
         reader = csv.DictReader(f,delimiter='\t')
         lst_dict_entries = [row for row in reader]
     if dict_color == None:
-        column_data = [entry.get(column) for entry in lst_dict_entries]
-        dict_color = _get_color_dict(column_data)
+        _data = [entry.get(color_column) for entry in lst_dict_entries]
+        dict_color = _get_color_dict(_data)
     for node in tree.traverse():
         try:
             dict_entry = _get_node_entry(node.name, lst_dict_entries)
         except ValueError:
             continue
-        column_data = dict_entry.get(column)
-        color = dict_color.get(column_data,'none')
-        node.color = color
+        # get color data (default: 'none')
+        color_data = dict_entry.get(color_column)
+        color = dict_color.get(color_data,'none')
+        # get size data (default: 1, assume single copy)
+        size = dict_entry.get(size_column, 1)
+        if size == '':
+            size = 1
+        # set node style
         style = ete2.NodeStyle()
         style['fgcolor'] = color
-        style['size'] = 50
+        style['size'] = _scale_size(int(size))
         node.set_style(style)
     return dict_color
 
@@ -237,10 +262,18 @@ if __name__ == '__main__':
         )
     parser.add_argument('-t', '--tabfile', dest='tabfile')
     parser.add_argument('-r', '--render', dest='outfile', default=None)
-    parser.add_argument('-c', '--column', dest='column', default=None)
+    parser.add_argument('-c', '--color-column',
+            dest='color',
+            default='COLOR_GROUP',
+            )
+    parser.add_argument('-s', '--size-column',
+            dest='size',
+            default='COPY_NUMBER',
+            )
     argspace = parser.parse_args()
     print_tree(argspace.treefile,
         tabfile=argspace.tabfile,
         outfile=argspace.outfile,
-        column=argspace.column,
+        color_column=argspace.color,
+        size_column=argspace.size,
         )
