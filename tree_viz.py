@@ -164,8 +164,7 @@ def color_nodes(tree, tabfile, column, dict_color=None):
     return dict_color
 
 def _scale_size(size,
-        **kwarg,
-        ):
+        **kwarg):
     """
     Scale raw size data on a linear scale to a log scale (or not).
 
