@@ -40,7 +40,7 @@ def print_tree(fname, **kwarg):
     # tabfile really may be a better positional arg
     tabfile = kwarg.pop('tabfile', None)
     if tabfile == None:
-        raise Exception
+        raise Exception('No tabfile provided.')
     # if column specified: use, otherwise default
     column = kwarg.pop('column','COLOR_GROUP')
     
