@@ -284,14 +284,14 @@ def _color_3pl2hex(tpl_color):
     hex_color = '#' + ''.join([hex(int(256*iI))[-2:] for iI in tpl_color])
     return hex_color
 
-if __name__ == '__main__':
+def _main():
     import argparse
     parser = argparse.ArgumentParser(
         description='Visualize newick trees',
         )
     parser.add_argument('treefile',
-#        nargs=1,
-#        dest='treefile',
+    #        nargs=1,
+    #        dest='treefile',
         )
     parser.add_argument('-t', '--tabfile', dest='tabfile')
     parser.add_argument('-r', '--render', dest='outfile', default=None)
@@ -310,3 +310,6 @@ if __name__ == '__main__':
         color_column=argspace.color,
         size_column=argspace.size,
         )
+
+if __name__ == '__main__':
+    _main()

@@ -1,0 +1,3 @@
+#!/usr/bin/env python
+import tree_viz
+tree_viz._main()
