@@ -7,7 +7,7 @@ import Bio
 
 def print_tree(fname, **kwarg):
     """
-    Print a tree read from a `fname`.
+    Print a tree read from a `fname` using ete2.
 
     Parameters
     ----------
@@ -39,17 +39,7 @@ def print_tree(fname, **kwarg):
     # if size_column specified: use, otherwise default
     size_column = kwarg.pop('size_column','COPY_NUMBER')
     
-    treestyle = ete2.TreeStyle()
-    treestyle.show_leaf_name = True
-    treestyle.title.add_face(ete2.TextFace(fname), column=0)
-    treestyle.force_topology = True
-    treestyle.rotation = 0
-    treestyle.show_branch_length = True
-    treestyle.show_leaf_name = False
-    treestyle.mode = 'c'
-    treestyle.layout_fn = _internal_layout
-    treestyle.legend_position = 1
-    
+    ete_treestyle = _get_ete_treestyle(fname)
     tree = ete2.Tree(fname)
     
     # color, size nodes
@@ -57,7 +47,8 @@ def print_tree(fname, **kwarg):
             color_column=color_column,
             size_column=size_column,
             )
-    _add_legend(treestyle, dict_color)
+    ete_treestyle.title.add_face(ete2.TextFace(fname), column=0)
+    _add_legend(ete_treestyle, dict_color)
     # if outfile specified, use, otherwise just show
     outfile = kwarg.pop('outfile',None)
     if outfile:
@@ -65,10 +56,10 @@ def print_tree(fname, **kwarg):
 #                w=841,
 #                h=1189,
                 units='mm',
-                tree_style=treestyle,
+                tree_style=ete_treestyle,
                 )
     else:
-        tree.show(tree_style=treestyle)
+        tree.show(tree_style=ete_treestyle)
     return None
 
 def nwk2nkx(fname):
@@ -234,6 +225,25 @@ def _scale_size(size,
     else:
         size = int(basesize * size)
     return size
+
+def _get_ete_treestyle(fname):
+    """
+    Returns an ete2 treestyle.
+
+    Returns
+    -------
+    ete_treestyle : ete2.TreeStyle
+    """
+    ete_treestyle = ete2.TreeStyle()
+    ete_treestyle.show_leaf_name = True
+    ete_treestyle.force_topology = True
+    ete_treestyle.rotation = 0
+    ete_treestyle.show_branch_length = True
+    ete_treestyle.show_leaf_name = False
+    ete_treestyle.mode = 'c'
+    ete_treestyle.layout_fn = _internal_layout
+    ete_treestyle.legend_position = 1
+    return ete_treestyle
 
 def _internal_layout(node):
     if node.is_leaf():
