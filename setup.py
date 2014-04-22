@@ -15,6 +15,6 @@ setup(
             ],
         license='LICENSE.txt',
         description='Utilities to help with visualizing PHYLIP trees',
-        long_description=open('README.txt').read(),
+        long_description=open('README.md').read(),
         )
 
