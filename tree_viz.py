@@ -7,7 +7,7 @@ import Bio
 
 def print_tree(fname, **kwarg):
     """
-    Print a tree read from a `fname`.
+    Print a tree read from a `fname` using ete2.
 
     Parameters
     ----------
@@ -39,24 +39,7 @@ def print_tree(fname, **kwarg):
     # if size_column specified: use, otherwise default
     size_column = kwarg.pop('size_column','COPY_NUMBER')
     
-    treestyle = ete2.TreeStyle()
-    # show filename
-    treestyle.title.add_face(ete2.TextFace(fname), column=0)
-    # do not use branch lengths to influence graphical branch lengths
-    treestyle.force_topology = True
-    # do not rotate, this makes navigation weird
-    treestyle.rotation = 0
-    # show the branch lengths
-    treestyle.show_branch_length = True
-    # do not automatically show leaf names, this is handled by layout_fn
-    treestyle.show_leaf_name = False
-    # circular layout
-    treestyle.mode = 'c'
-    # custom layout function to be used on each node
-    treestyle.layout_fn = _internal_layout
-    # place legend in top-left
-    treestyle.legend_position = 1
-    
+    ete_treestyle = _get_ete_treestyle(fname)
     tree = ete2.Tree(fname)
     
     # color, size nodes
@@ -64,7 +47,9 @@ def print_tree(fname, **kwarg):
             color_column=color_column,
             size_column=size_column,
             )
-    _add_legend(treestyle, dict_color)
+    # show filename
+    ete_treestyle.title.add_face(ete2.TextFace(fname), column=0)
+    _add_legend(ete_treestyle, dict_color)
     # if outfile specified, use, otherwise just show
     outfile = kwarg.pop('outfile',None)
     if outfile:
@@ -72,10 +57,10 @@ def print_tree(fname, **kwarg):
 #                w=841,
 #                h=1189,
                 units='mm',
-                tree_style=treestyle,
+                tree_style=ete_treestyle,
                 )
     else:
-        tree.show(tree_style=treestyle)
+        tree.show(tree_style=ete_treestyle)
     return None
 
 def nwk2nkx(fname):
@@ -241,6 +226,31 @@ def _scale_size(size,
     else:
         size = int(basesize * size)
     return size
+
+def _get_ete_treestyle(fname):
+    """
+    Returns an ete2 treestyle.
+
+    Returns
+    -------
+    ete_treestyle : ete2.TreeStyle
+    """
+    ete_treestyle = ete2.TreeStyle()
+    # do not use branch lengths to influence graphical branch lengths
+    ete_treestyle.force_topology = True
+    # do not rotate, this makes navigation weird
+    ete_treestyle.rotation = 0
+    # show the branch lengths
+    ete_treestyle.show_branch_length = True
+    # do not automatically show leaf names, this is handled by layout_fn
+    ete_treestyle.show_leaf_name = False
+    # circular layout
+    ete_treestyle.mode = 'c'
+    # custom layout function to be used on each node
+    ete_treestyle.layout_fn = _internal_layout
+    # place legend in top-left
+    ete_treestyle.legend_position = 1
+    return ete_treestyle
 
 def _internal_layout(node):
     if node.is_leaf():
