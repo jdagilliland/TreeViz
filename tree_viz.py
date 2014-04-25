@@ -40,14 +40,21 @@ def print_tree(fname, **kwarg):
     size_column = kwarg.pop('size_column','COPY_NUMBER')
     
     treestyle = ete2.TreeStyle()
-    treestyle.show_leaf_name = True
+    # show filename
     treestyle.title.add_face(ete2.TextFace(fname), column=0)
+    # do not use branch lengths to influence graphical branch lengths
     treestyle.force_topology = True
+    # do not rotate, this makes navigation weird
     treestyle.rotation = 0
+    # show the branch lengths
     treestyle.show_branch_length = True
+    # do not automatically show leaf names, this is handled by layout_fn
     treestyle.show_leaf_name = False
+    # circular layout
     treestyle.mode = 'c'
+    # custom layout function to be used on each node
     treestyle.layout_fn = _internal_layout
+    # place legend in top-left
     treestyle.legend_position = 1
     
     tree = ete2.Tree(fname)
