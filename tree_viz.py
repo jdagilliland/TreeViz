@@ -24,6 +24,10 @@ def print_tree(fname, **kwarg):
     outfile : str, optional
         If provided, renders the tree to an image file, rather than
         displaying it in the GUI.
+    phyfile : str, optional
+        If provided, uses the PHYLIP formatted file to determine how long
+        a the sequences in the tree are, and then uses that data to convert
+        edge lengths into proper mutation counts.
 
     Returns
     -------
@@ -38,6 +42,15 @@ def print_tree(fname, **kwarg):
     color_column = kwarg.pop('color_column','COLOR_GROUP')
     # if size_column specified: use, otherwise default
     size_column = kwarg.pop('size_column','COPY_NUMBER')
+    # if phyfile specified: use, otherwise False
+    phyfile = kwarg.pop('phyfile',False)
+    if phyfile:
+        len_seq = _get_seq_len(phyfile)
+        print('Set sequence length from {file0}'.format(file0=phyfile))
+    else:
+        len_seq = 1
+        print(('''Since no *.phy file was provided, branch lengths will be''' +
+                ''' distances rather than mutation counts''').format())
     
     ete_treestyle = _get_ete_treestyle(fname)
     tree = ete2.Tree(fname)
@@ -46,6 +59,7 @@ def print_tree(fname, **kwarg):
     dict_color = format_nodes(tree, tabfile,
             color_column=color_column,
             size_column=size_column,
+            len_seq=len_seq,
             )
     # show filename
     ete_treestyle.title.add_face(ete2.TextFace(fname), column=0)
@@ -124,6 +138,7 @@ def format_nodes(tree, tabfile,
         color_column=None,
         size_column=None,
         dict_color=None,
+        len_seq=1,
         ):
     """
     Color nodes of `tree` according to data in `tabfile`.
@@ -147,6 +162,9 @@ def format_nodes(tree, tabfile,
         selected `color_column`.
         If not provided, a default dictionary of appropriately spaced colors
         will be constructed for all values found in `color_column`.
+    len_seq : int, optional
+        The integer length of the sequences represented by this tree.
+        (default: 1)
 
     Returns
     -------
@@ -164,6 +182,7 @@ def format_nodes(tree, tabfile,
         _data = [entry.get(color_column) for entry in lst_dict_entries]
         dict_color = _get_color_dict(_data)
     for node in tree.traverse():
+        node.dist *= len_seq
         try:
             dict_entry = _get_node_entry(node.name, lst_dict_entries)
         except ValueError:
@@ -180,6 +199,7 @@ def format_nodes(tree, tabfile,
         style['fgcolor'] = color
         style['size'] = _scale_size(int(size))
         node.set_style(style)
+        # scale distance to represent mutation length
     return dict_color
 
 def _add_legend(treestyle, dict_legend, legend_field=None):
@@ -301,6 +321,10 @@ def _color_3pl2hex(tpl_color):
     hex_color = '#' + ''.join([hex(int(256*iI))[-2:] for iI in tpl_color])
     return hex_color
 
+def _get_seq_len(phyfile):
+    headrow = open(phyfile, 'rt').readline()
+    return int(headrow.split()[1])
+
 def _main():
     import argparse
     parser = argparse.ArgumentParser(
@@ -320,12 +344,16 @@ def _main():
             dest='size',
             default='COPY_NUMBER',
             )
+    parser.add_argument('-p', '--phy-file',
+            dest='phyfile',
+            )
     argspace = parser.parse_args()
     print_tree(argspace.treefile,
         tabfile=argspace.tabfile,
         outfile=argspace.outfile,
         color_column=argspace.color,
         size_column=argspace.size,
+        phyfile=argspace.phyfile,
         )
 
 if __name__ == '__main__':
