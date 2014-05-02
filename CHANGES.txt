@@ -1,1 +1,2 @@
+v0.1.1dev00, 2014-05-02 -- Changes to appearance of trees.
 v0.1.0, 2014-04-18 -- Initial release.

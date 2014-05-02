@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
         name='TreeViz',
-        version='0.1.0',
+        version='0.1.1dev',
         author='J. D. A. Gilliland',
         author_email='jdagilliland@gmail.com',
         py_modules=['tree_viz'],
