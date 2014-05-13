@@ -44,17 +44,19 @@ def print_tree(fname, **kwarg):
     size_column = kwarg.pop('size_column','COPY_NUMBER')
     # if phyfile specified: use, otherwise False
     phyfile = kwarg.pop('phyfile',False)
+
+    ete_treestyle = _get_ete_treestyle(fname)
+    tree = ete2.Tree(fname)
     if phyfile:
         len_seq = _get_seq_len(phyfile)
         print('Set sequence length from {file0}'.format(file0=phyfile))
+        # root tree
+        root_ete_tree(tree, phyfile)
     else:
         len_seq = 1
         print(('''Since no *.phy file was provided, branch lengths will be''' +
                 ''' distances rather than mutation counts''').format())
-    
-    ete_treestyle = _get_ete_treestyle(fname)
-    tree = ete2.Tree(fname)
-    
+
     # color, size nodes
     dict_color = format_nodes(tree, tabfile,
             color_column=color_column,
@@ -67,7 +69,7 @@ def print_tree(fname, **kwarg):
     # if outfile specified, use, otherwise just show
     outfile = kwarg.pop('outfile',None)
     if outfile:
-        tree.render(outfile, 
+        tree.render(outfile,
 #                w=841,
 #                h=1189,
                 units='mm',
@@ -117,6 +119,23 @@ def cleanup_tree(nkx_tree):
     # no-op so far
     return clean_tree
 
+def root_ete_tree(ete_tree, phyfile):
+    """
+    Properly root an ete tree according the the first sequence in the *.phy
+    file.
+    """
+    print('Original root was {node}'.format(node=ete_tree.get_tree_root()))
+    # identify intended germline sequence name
+    phyfileobj = open(phyfile, 'rt')
+    headrow = phyfileobj.readline()
+    germrow = phyfileobj.readline()
+    germname = germrow.split()[0]
+
+    # root tree at germline
+    germnode = ete_tree.search_nodes(name=germname)[0]
+    ete_tree.set_outgroup(germnode)
+    return None
+
 def _collapse_null_branches(nkx_tree):
     """
     Collapses 0 distance branches of a networkx tree (`nkx_tree`).
@@ -145,7 +164,7 @@ def format_nodes(tree, tabfile,
 
     Parameters
     ----------
-    tree : ete2.tree.TreeNode 
+    tree : ete2.tree.TreeNode
         The tree to color.
     tabfile : str
         The filename of the `tabfile` from which to draw data.
