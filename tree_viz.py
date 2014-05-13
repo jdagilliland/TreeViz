@@ -325,7 +325,7 @@ def _get_seq_len(phyfile):
     headrow = open(phyfile, 'rt').readline()
     return int(headrow.split()[1])
 
-def _main():
+def _treeviz_main():
     import argparse
     parser = argparse.ArgumentParser(
         description='Visualize newick trees',
