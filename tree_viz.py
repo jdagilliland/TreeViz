@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import csv
+import os
 
 import ete2
 import numpy as np
@@ -28,6 +29,8 @@ def print_tree(fname, **kwarg):
         If provided, uses the PHYLIP formatted file to determine how long
         a the sequences in the tree are, and then uses that data to convert
         edge lengths into proper mutation counts.
+    outputdir : str, optional
+        Destination for output tree analysis files. (default: False)
 
     Returns
     -------
@@ -44,6 +47,9 @@ def print_tree(fname, **kwarg):
     size_column = kwarg.pop('size_column','COPY_NUMBER')
     # if phyfile specified: use, otherwise False
     phyfile = kwarg.pop('phyfile',False)
+    # if outputdir specified: use, otherwise False
+    outputdir = kwarg.pop('outputdir', False)
+    # print(outputdir)
 
     ete_treestyle = _get_ete_treestyle(fname)
     tree = ete2.Tree(fname)
@@ -63,10 +69,27 @@ def print_tree(fname, **kwarg):
             size_column=size_column,
             len_seq=len_seq,
             )
-    lineages = find_pure_subtrees(tree)
-    for (group, lineage) in lineages:
+    lineages_monophyly = find_pure_subtrees(tree)
+    n_lineage = len(lineages_monophyly)
+    print('Number of pure lineages identified {:d}'.format(n_lineage))
+    for iI, (group, lineage) in enumerate(lineages_monophyly):
         print(group)
         print(lineage.get_ascii())
+        if outputdir:
+            try:
+                os.listdir(outputdir)
+            except:
+                os.makedirs(outputdir)
+            print('Writing output files...')
+            # 4-digit output file basename
+            outbasename = os.path.join(outputdir, 'monophyly_' + group +
+                    '_{:04d}'.format(iI))
+            # print Newick tree to file
+            treefname = outbasename + '.tree'
+            lineage.write(outfile=treefname)
+            # print ascii tree to file
+            outfname = outbasename + '.asc'
+            open(outfname,'wb').write(lineage.get_ascii())
     # show filename
     ete_treestyle.title.add_face(ete2.TextFace(fname), column=0)
     _add_legend(ete_treestyle, dict_color)
@@ -157,13 +180,13 @@ def find_pure_subtrees(ete_tree):
     """
     set_group = {getattr(node, 'group', None) for node in
             ete_tree.traverse()}
-    print(type(set_group))
     lst_puresub = list()
     for group in set_group:
-        lineages = ete_tree.get_monophyletic(values=[group],
-                target_attr='group')
+        lineages = list(ete_tree.get_monophyletic(values=[group],
+                target_attr='group'))
         print(str(group) + '----------------------------------------------')
-        for lineage in lineages: print(lineage.get_ascii())
+        for lineage in lineages:
+            print(lineage.get_ascii())
         lst_puresub.extend([(group, lineage) for lineage in lineages])
     return lst_puresub
 
@@ -241,7 +264,7 @@ def format_nodes(tree, tabfile,
         color_data = dict_entry.get(color_column)
         color = dict_color.get(color_data, 'none')
         node.add_feature('group', color_data)
-        print(node.group)
+        # print(node.group)
         # get size data (default: 1, assume single copy)
         size = dict_entry.get(size_column, 1)
         if size == '':
@@ -399,6 +422,18 @@ def _treeviz_main():
     parser.add_argument('-p', '--phy-file',
             dest='phyfile',
             )
+    parser.add_argument('-o', '--output-dir',
+            dest='outputdir',
+            help="""
+            The directory into which to put analysis files, if not
+            supplied, analysis is not performed.
+            If this argument is supplied with no path, the current
+            directory is used for output analysis files.
+            """,
+            default=None,
+            const=os.getcwd(),
+            nargs='?',
+            )
     argspace = parser.parse_args()
     print_tree(argspace.treefile,
         tabfile=argspace.tabfile,
@@ -406,7 +441,9 @@ def _treeviz_main():
         color_column=argspace.color,
         size_column=argspace.size,
         phyfile=argspace.phyfile,
+        outputdir=argspace.outputdir,
         )
+    return None
 
 if __name__ == '__main__':
     _main()
