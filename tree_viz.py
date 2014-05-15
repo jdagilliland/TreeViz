@@ -63,6 +63,10 @@ def print_tree(fname, **kwarg):
             size_column=size_column,
             len_seq=len_seq,
             )
+    lineages = find_pure_subtrees(tree)
+    for (group, lineage) in lineages:
+        print(group)
+        print(lineage.get_ascii())
     # show filename
     ete_treestyle.title.add_face(ete2.TextFace(fname), column=0)
     _add_legend(ete_treestyle, dict_color)
@@ -136,6 +140,33 @@ def root_ete_tree(ete_tree, phyfile):
     ete_tree.set_outgroup(germnode)
     return None
 
+def find_pure_subtrees(ete_tree):
+    """
+    Identify subtrees of a colored tree whose descendants are pure.
+
+    Parameters
+    ----------
+    ete_tree : ete2.tree.TreeNode
+        The tree from which to draw monophyletic subtrees.
+        This tree must already be colored.
+
+    Returns
+    -------
+    lst_puresub : list of ete2.tree.TreeNode
+        The list of subtrees that are monophyletic by group.
+    """
+    set_group = {getattr(node, 'group', None) for node in
+            ete_tree.traverse()}
+    print(type(set_group))
+    lst_puresub = list()
+    for group in set_group:
+        lineages = ete_tree.get_monophyletic(values=[group],
+                target_attr='group')
+        print(str(group) + '----------------------------------------------')
+        for lineage in lineages: print(lineage.get_ascii())
+        lst_puresub.extend([(group, lineage) for lineage in lineages])
+    return lst_puresub
+
 def _collapse_null_branches(nkx_tree):
     """
     Collapses 0 distance branches of a networkx tree (`nkx_tree`).
@@ -208,7 +239,9 @@ def format_nodes(tree, tabfile,
             continue
         # get color data (default: 'none')
         color_data = dict_entry.get(color_column)
-        color = dict_color.get(color_data,'none')
+        color = dict_color.get(color_data, 'none')
+        node.add_feature('group', color_data)
+        print(node.group)
         # get size data (default: 1, assume single copy)
         size = dict_entry.get(size_column, 1)
         if size == '':
