@@ -49,6 +49,8 @@ def print_tree(fname, **kwarg):
     phyfile = kwarg.pop('phyfile',False)
     # if outputdir specified: use, otherwise False
     outputdir = kwarg.pop('outputdir', False)
+    # if set not to display, don't, otherwise display tree
+    display = kwarg.pop('display', True)
     # print(outputdir)
 
     ete_treestyle = _get_ete_treestyle(fname)
@@ -124,8 +126,10 @@ def print_tree(fname, **kwarg):
                 units='mm',
                 tree_style=ete_treestyle,
                 )
-    else:
+    elif display:
         tree.show(tree_style=ete_treestyle)
+    else:
+        return None
     return None
 
 def nwk2nkx(fname):
@@ -487,6 +491,15 @@ def _treeviz_main():
         )
     parser.add_argument('-t', '--tabfile', dest='tabfile')
     parser.add_argument('-r', '--render', dest='outfile', default=None)
+    parser.add_argument('-n', '--no-display', dest='display',
+            action='store_false',
+            help="""
+            Use if you do not actually want to display the tree.
+            This option is only useful if you are performing subtree
+            analyses, because otherwise the whole point is to display
+            the tree.
+            """,
+            )
     parser.add_argument('-c', '--color-column',
             dest='color',
             default='COLOR_GROUP',
@@ -518,6 +531,7 @@ def _treeviz_main():
         size_column=argspace.size,
         phyfile=argspace.phyfile,
         outputdir=argspace.outputdir,
+        display=argspace.display,
         )
     return None
 
