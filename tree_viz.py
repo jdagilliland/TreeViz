@@ -57,7 +57,7 @@ def print_tree(fname, **kwarg):
         len_seq = _get_seq_len(phyfile)
         print('Set sequence length from {file0}'.format(file0=phyfile))
         # root tree
-        root_ete_tree(tree, phyfile)
+        germnode = root_ete_tree(tree, phyfile)
     else:
         len_seq = 1
         print(('''Since no *.phy file was provided, branch lengths will be''' +
@@ -70,8 +70,9 @@ def print_tree(fname, **kwarg):
             len_seq=len_seq,
             )
     lineages_monophyly = find_pure_subtrees(tree)
-    n_lineage = len(lineages_monophyly)
-    print('Number of pure lineages identified {:d}'.format(n_lineage))
+    n_lineage_monophyly = len(lineages_monophyly)
+    print('Number of pure lineages identified {:d}'.format(
+        n_lineage_monophyly))
     for iI, (group, lineage) in enumerate(lineages_monophyly):
         print(group)
         print(lineage.get_ascii())
@@ -83,6 +84,27 @@ def print_tree(fname, **kwarg):
             print('Writing output files...')
             # 4-digit output file basename
             outbasename = os.path.join(outputdir, 'monophyly_' + group +
+                    '_{:04d}'.format(iI))
+            # print Newick tree to file
+            treefname = outbasename + '.tree'
+            lineage.write(outfile=treefname)
+            # print ascii tree to file
+            outfname = outbasename + '.asc'
+            open(outfname,'wb').write(lineage.get_ascii())
+    lineages_dist = find_distant_subtrees(tree, root_node=germnode)
+    n_lineage_dist = len(lineages_dist)
+    print('Number of distant lineages identified {:d}'.format(
+        n_lineage_dist))
+    for iI, lineage in enumerate(lineages_dist):
+        print(lineage.get_ascii())
+        if outputdir:
+            try:
+                os.listdir(outputdir)
+            except:
+                os.makedirs(outputdir)
+            print('Writing output files...')
+            # 4-digit output file basename
+            outbasename = os.path.join(outputdir, 'dist_' +
                     '_{:04d}'.format(iI))
             # print Newick tree to file
             treefname = outbasename + '.tree'
@@ -161,7 +183,61 @@ def root_ete_tree(ete_tree, phyfile):
     # root tree at germline
     germnode = ete_tree.search_nodes(name=germname)[0]
     ete_tree.set_outgroup(germnode)
-    return None
+    return germnode
+
+def find_distant_subtrees(ete_tree, root_node=None, dist_lim=4):
+    """
+    Splits a tree into subtrees which root nodes are more that 4
+    mutations away from the overall root (generally a germline
+    sequence).
+
+    Parameters
+    ----------
+    ete_tree : ete2.tree.TreeNode
+        The tree from which to split subtrees distant from root node
+    root_node : ete2.tree.TreeNode
+        The root node from which to asses mutation distance.
+    dist_lim : float
+        The minimum distance a subtree must be from the root node to be
+        considered a distant subtree.
+
+    Returns
+    -------
+    lst_distsub : list of ete2.tree.Treenode
+        The tree will have been split up into trees, each of whose
+        respective roots will be at least `dist_lim` common mutations away
+        from the root nodeself.
+    """
+    if root_node == None:
+        # If this function is called without specifying a root node,
+        # assume that the user is calling it on a whole tree, and
+        # intends for the root of that tree to be treated as the root
+        # node.
+        root_node = ete_tree
+        print('No root node specified. Using provided tree.')
+    distance = ete_tree.get_distance(root_node)
+    print('Distance between node and root: {:0.2f}'.format(distance))
+    print('dist_lim: {:0.2f}'.format(dist_lim))
+    if distance >= dist_lim:
+        # If this node is already far enough away from root, return it,
+        # skipping all descendants.
+        print('Found distant subtree, skipping descendants')
+        print(ete_tree)
+        return [ete_tree]
+    else:
+        # If this node is still too close to root, iterate through each
+        # child node to check for subtrees that start far enough away
+        # from the root.
+        print('Attempting to find distant subtrees among children nodes')
+        lst_distsub = list()
+        for child in ete_tree.get_children():
+            print(child)
+            print(root_node)
+            lst_distsub.extend(find_distant_subtrees(child,
+                root_node=root_node, dist_lim=dist_lim))
+        # print('Found these distant subtrees: {subtrees}'.format(
+        #     subtrees=lst_distsub))
+    return lst_distsub
 
 def find_pure_subtrees(ete_tree):
     """
