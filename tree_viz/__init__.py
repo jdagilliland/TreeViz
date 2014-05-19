@@ -109,7 +109,7 @@ class GermTree(ete2.coretype.tree.TreeNode):
                     dist_lim=dist_lim))
         return lst_distsub
 
-    def collapse_null_branches_ete(self):
+    def collapse_null_branches(self):
         """
         Collapse 0 distance branches from an ete2 tree
         (`ete2.tree.TreeNode`).
@@ -143,7 +143,7 @@ class GermTree(ete2.coretype.tree.TreeNode):
             parent.delete(preserve_branch_length=True)
         # Recurse through all children
         for child in node.get_children():
-            collapse_null_branches_ete(child)
+            child.collapse_null_branches()
         return None
 
     def format_nodes(self,
@@ -281,6 +281,7 @@ class GermTree(ete2.coretype.tree.TreeNode):
                 size_column=size_column,
                 len_seq=tree.len_seq,
                 )
+        tree.collapse_null_branches()
         lineages_monophyly = tree.find_pure_subtrees()
         n_lineage_monophyly = len(lineages_monophyly)
         print('Number of pure lineages identified {:d}'.format(
@@ -340,7 +341,6 @@ class GermTree(ete2.coretype.tree.TreeNode):
             tree.show(tree_style=tree.ete_treestyle)
         else:
             return None
-        print('This is from the virtualenv')
         return None
 
     def find_pure_subtrees(self):
