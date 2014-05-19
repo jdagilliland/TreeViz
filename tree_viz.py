@@ -184,9 +184,15 @@ def root_ete_tree(ete_tree, phyfile):
     germrow = phyfileobj.readline()
     germname = germrow.split()[0]
 
-    # root tree at germline
-    germnode = ete_tree.search_nodes(name=germname)[0]
-    ete_tree.set_outgroup(germnode)
+    # try to root tree at germline
+    try:
+        germnode = ete_tree.search_nodes(name=germname)[0]
+        ete_tree.set_outgroup(germnode)
+    except Exception as exc:
+        print(exc)
+        print('''Could not find node named {name} in this tree, the tree
+        may be inappropriately rooted.'''.format(name=germname))
+        return None
     return germnode
 
 def find_distant_subtrees(ete_tree, root_node=None, dist_lim=4):
