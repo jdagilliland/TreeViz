@@ -6,6 +6,212 @@ import ete2
 import numpy as np
 import Bio
 
+class GermTree(ete2.tree.Tree):
+    """
+    Class to encapsulate the many actions that I need to make on
+    ete2.Tree instances.
+    """
+    def __init__(self, *args, **kwarg):
+        ete2.tree.Tree.__init__(self, *args, **kwarg)
+        # initialize value of sequence length to 1
+        self.len_seq = 1
+
+    def set_tabfile(self, tabfile):
+        """
+        Read in data from a tabfile to which any method may refer.
+        """
+        with open(tabfile,'rb') as f:
+            reader = csv.DictReader(f,delimiter='\t')
+            self.lst_dict_tab_entries = [row for row in reader]
+        return None
+
+    def set_phyfile(self, phyfile):
+        """
+        Read in data from a PHYLIP formatted *.phy file.
+        This will set the sequence length properly, as well as root the
+        tree at the first sequence found in the PHY file.
+        """
+        headrow = open(phyfile, 'rt').readline()
+        self.len_seq = int(headrow.split()[1])
+        print('Set sequence length from {file0}'.format(file0=phyfile))
+        germrow = phyfileobj.readline()
+        self.germname = germrow.split()[0]
+
+    def root_tree(self):
+        """
+        Properly root an ete tree according the the first sequence in the *.phy
+        file.
+        """
+        if not hasattr(self, 'germname'):
+            raise ValueError(
+                '''Has no attribute 'germname'. ''' +
+                '''Make sure to run self.set_phyfile first.''')
+        # try to root tree at germline
+        try:
+            self.germnode = self.search_nodes(name=self.germname)[0]
+            self.set_outgroup(self.germnode)
+        except Exception as exc:
+            print(exc)
+            print('''Could not find node named {name} in this tree, the tree
+            may be inappropriately rooted.'''.format(name=self.germname))
+
+    def find_distant_subtrees(self, root_node=None, dist_lim=4):
+        """
+        Splits a tree into subtrees which root nodes are more than 4
+        mutations away from the overall root (generally a germline
+        sequence).
+
+        Parameters
+        ----------
+        root_node : ete2.tree.TreeNode
+            The root node from which to asses mutation distance.
+        dist_lim : float
+            The minimum distance a subtree must be from the root node to be
+            considered a distant subtree.
+
+        Returns
+        -------
+        lst_distsub : list of ete2.tree.Treenode
+            The tree will have been split up into trees, each of whose
+            respective roots will be at least `dist_lim` common mutations away
+            from the root nodeself.
+        """
+        if root_node == None:
+            # If this function is called without specifying a root node,
+            # assume that the user is calling it on a whole tree, and
+            # intends for the root of that tree to be treated as the root
+            # node.
+            root_node = self
+            print('No root node specified. Using provided tree.')
+        distance = self.get_distance(root_node)
+        print('Distance between node and root: {:0.2f}'.format(distance))
+        print('dist_lim: {:0.2f}'.format(dist_lim))
+        if distance >= dist_lim:
+            # If this node is already far enough away from root, return it,
+            # skipping all descendants.
+            print('Found distant subtree, skipping descendants')
+            print(self)
+            return [self]
+        else:
+            # If this node is still too close to root, iterate through each
+            # child node to check for subtrees that start far enough away
+            # from the root.
+            print('Attempting to find distant subtrees among children nodes')
+            lst_distsub = list()
+            for child in self.get_children():
+                print(child)
+                print(root_node)
+                lst_distsub.extend(child.find_distant_subtrees(
+                    root_node=root_node, dist_lim=dist_lim))
+        return lst_distsub
+
+    def collapse_null_branches_ete(self):
+        """
+        Collapse 0 distance branches from an ete2 tree
+        (`ete2.tree.TreeNode`).
+        Applies recursively.
+
+        Returns
+        -------
+        None
+        """
+        node = self
+        # Remove a node's parent iff the node's branch length is 0 and the
+        # parent's name is 'NoName', that way we avoid removing named, and
+        # thus possibly informative, nodes.
+        if node.dist == 0 and node.up.name == 'NoName':
+            parent = node.up
+            # grandparent = parent.up
+            # node.detach()
+            for child in [child for child in parent.get_children() if
+                    child != node]:
+                # Remove all children except the node whose branch length is
+                # 0.
+                # Ensure that the non-zero distances are preserved.
+                dist = child.dist
+                node.add_child(child.detach(), dist=dist)
+            # Make sure that the children are all detached from the parent.
+            # This can be removed once tested
+            # print(parent.get_children())
+            # assert(len(parent.get_children()) == 0)
+            # Remove the empty parent, connecting the node to the
+            # grandparent with the branch length preserved.
+            parent.delete(preserve_branch_length=True)
+        # Recurse through all children
+        for child in node.get_children():
+            collapse_null_branches_ete(child)
+        return None
+
+    def format_nodes(self,
+            tabfile=None,
+            color_column=None,
+            size_column=None,
+            dict_color=None,
+            len_seq=1,
+            ):
+        """
+        Color nodes of `tree` according to data in `tabfile`.
+
+        Parameters
+        ----------
+        tabfile : str
+            The filename of the `tabfile` from which to draw data.
+        color_column : str, optional
+            A string to indicate the column of the `tabfile` to use for
+            coloration.
+            (default: None)
+        size_column : str, optional
+            A string to indicate the column of the `tabfile` to use to
+            determine node size.
+            (default: None)
+        dict_color : dict, optional
+            A dictionary of colors to use based on the values in the
+            selected `color_column`.
+            If not provided, a default dictionary of appropriately spaced colors
+            will be constructed for all values found in `color_column`.
+        len_seq : int, optional
+            The integer length of the sequences represented by this tree.
+            (default: 1)
+
+        Returns
+        -------
+        dict_color : dict
+            The dictionary of colors used in the colorization of the tree.
+            This is especially useful if it was not specified as an input
+            argument, because otherwise one has no way to know how to
+            correlate colors on the plot with the values they color.
+
+        """
+        if dict_color == None:
+            _data = [entry.get(color_column) for entry in self.lst_dict_entries]
+            self.dict_color = _get_color_dict(_data)
+        else:
+            self.dict_color = dict_color
+            ###### resume here
+        for node in tree.traverse():
+            node.dist *= len_seq
+            try:
+                dict_entry = _get_node_entry(node.name, lst_dict_entries)
+            except ValueError:
+                continue
+            # get color data (default: 'none')
+            color_data = dict_entry.get(color_column)
+            color = dict_color.get(color_data, 'none')
+            node.add_feature('group', color_data)
+            # print(node.group)
+            # get size data (default: 1, assume single copy)
+            size = dict_entry.get(size_column, 1)
+            if size == '':
+                size = 1
+            # set node style
+            style = ete2.NodeStyle()
+            style['fgcolor'] = color
+            style['size'] = _scale_size(int(size))
+            node.set_style(style)
+            # scale distance to represent mutation length
+        return dict_color
+
+
 def print_tree(fname, **kwarg):
     """
     Print a tree read from a `fname` using ete2.
@@ -54,7 +260,7 @@ def print_tree(fname, **kwarg):
     # print(outputdir)
 
     ete_treestyle = _get_ete_treestyle(fname)
-    tree = ete2.Tree(fname)
+    tree = GermTree(fname)
     if phyfile:
         len_seq = _get_seq_len(phyfile)
         print('Set sequence length from {file0}'.format(file0=phyfile))
@@ -172,82 +378,82 @@ def cleanup_tree(nkx_tree):
     # no-op so far
     return clean_tree
 
-def root_ete_tree(ete_tree, phyfile):
-    """
-    Properly root an ete tree according the the first sequence in the *.phy
-    file.
-    """
-    print('Original root was {node}'.format(node=ete_tree.get_tree_root()))
-    # identify intended germline sequence name
-    phyfileobj = open(phyfile, 'rt')
-    headrow = phyfileobj.readline()
-    germrow = phyfileobj.readline()
-    germname = germrow.split()[0]
+# def root_ete_tree(ete_tree, phyfile):
+#     """
+#     Properly root an ete tree according the the first sequence in the *.phy
+#     file.
+#     """
+#     print('Original root was {node}'.format(node=ete_tree.get_tree_root()))
+#     # identify intended germline sequence name
+#     phyfileobj = open(phyfile, 'rt')
+#     headrow = phyfileobj.readline()
+#     germrow = phyfileobj.readline()
+#     germname = germrow.split()[0]
 
-    # try to root tree at germline
-    try:
-        germnode = ete_tree.search_nodes(name=germname)[0]
-        ete_tree.set_outgroup(germnode)
-    except Exception as exc:
-        print(exc)
-        print('''Could not find node named {name} in this tree, the tree
-        may be inappropriately rooted.'''.format(name=germname))
-        return None
-    return germnode
+#     # try to root tree at germline
+#     try:
+#         germnode = ete_tree.search_nodes(name=germname)[0]
+#         ete_tree.set_outgroup(germnode)
+#     except Exception as exc:
+#         print(exc)
+#         print('''Could not find node named {name} in this tree, the tree
+#         may be inappropriately rooted.'''.format(name=germname))
+#         return None
+#     return germnode
 
-def find_distant_subtrees(ete_tree, root_node=None, dist_lim=4):
-    """
-    Splits a tree into subtrees which root nodes are more that 4
-    mutations away from the overall root (generally a germline
-    sequence).
+# def find_distant_subtrees(ete_tree, root_node=None, dist_lim=4):
+#     """
+#     Splits a tree into subtrees which root nodes are more than 4
+#     mutations away from the overall root (generally a germline
+#     sequence).
 
-    Parameters
-    ----------
-    ete_tree : ete2.tree.TreeNode
-        The tree from which to split subtrees distant from root node
-    root_node : ete2.tree.TreeNode
-        The root node from which to asses mutation distance.
-    dist_lim : float
-        The minimum distance a subtree must be from the root node to be
-        considered a distant subtree.
+#     Parameters
+#     ----------
+#     ete_tree : ete2.tree.TreeNode
+#         The tree from which to split subtrees distant from root node
+#     root_node : ete2.tree.TreeNode
+#         The root node from which to asses mutation distance.
+#     dist_lim : float
+#         The minimum distance a subtree must be from the root node to be
+#         considered a distant subtree.
 
-    Returns
-    -------
-    lst_distsub : list of ete2.tree.Treenode
-        The tree will have been split up into trees, each of whose
-        respective roots will be at least `dist_lim` common mutations away
-        from the root nodeself.
-    """
-    if root_node == None:
-        # If this function is called without specifying a root node,
-        # assume that the user is calling it on a whole tree, and
-        # intends for the root of that tree to be treated as the root
-        # node.
-        root_node = ete_tree
-        print('No root node specified. Using provided tree.')
-    distance = ete_tree.get_distance(root_node)
-    print('Distance between node and root: {:0.2f}'.format(distance))
-    print('dist_lim: {:0.2f}'.format(dist_lim))
-    if distance >= dist_lim:
-        # If this node is already far enough away from root, return it,
-        # skipping all descendants.
-        print('Found distant subtree, skipping descendants')
-        print(ete_tree)
-        return [ete_tree]
-    else:
-        # If this node is still too close to root, iterate through each
-        # child node to check for subtrees that start far enough away
-        # from the root.
-        print('Attempting to find distant subtrees among children nodes')
-        lst_distsub = list()
-        for child in ete_tree.get_children():
-            print(child)
-            print(root_node)
-            lst_distsub.extend(find_distant_subtrees(child,
-                root_node=root_node, dist_lim=dist_lim))
-        # print('Found these distant subtrees: {subtrees}'.format(
-        #     subtrees=lst_distsub))
-    return lst_distsub
+#     Returns
+#     -------
+#     lst_distsub : list of ete2.tree.Treenode
+#         The tree will have been split up into trees, each of whose
+#         respective roots will be at least `dist_lim` common mutations away
+#         from the root nodeself.
+#     """
+#     if root_node == None:
+#         # If this function is called without specifying a root node,
+#         # assume that the user is calling it on a whole tree, and
+#         # intends for the root of that tree to be treated as the root
+#         # node.
+#         root_node = ete_tree
+#         print('No root node specified. Using provided tree.')
+#     distance = ete_tree.get_distance(root_node)
+#     print('Distance between node and root: {:0.2f}'.format(distance))
+#     print('dist_lim: {:0.2f}'.format(dist_lim))
+#     if distance >= dist_lim:
+#         # If this node is already far enough away from root, return it,
+#         # skipping all descendants.
+#         print('Found distant subtree, skipping descendants')
+#         print(ete_tree)
+#         return [ete_tree]
+#     else:
+#         # If this node is still too close to root, iterate through each
+#         # child node to check for subtrees that start far enough away
+#         # from the root.
+#         print('Attempting to find distant subtrees among children nodes')
+#         lst_distsub = list()
+#         for child in ete_tree.get_children():
+#             print(child)
+#             print(root_node)
+#             lst_distsub.extend(find_distant_subtrees(child,
+#                 root_node=root_node, dist_lim=dist_lim))
+#         # print('Found these distant subtrees: {subtrees}'.format(
+#         #     subtrees=lst_distsub))
+#     return lst_distsub
 
 def find_pure_subtrees(ete_tree):
     """
@@ -293,47 +499,47 @@ def _collapse_null_branches(nkx_tree):
     # no-op so far
     return collapsed_tree
 
-def collapse_null_branches_ete(ete_tree):
-    """
-    Collapse 0 distance branches from an ete2 tree
-    (`ete2.tree.TreeNode`).
-    Applies recursively.
+# def collapse_null_branches_ete(ete_tree):
+#     """
+#     Collapse 0 distance branches from an ete2 tree
+#     (`ete2.tree.TreeNode`).
+#     Applies recursively.
 
-    Parameters
-    ----------
-    ete_tree : ete2.tree.TreeNode
-        The ete2 tree to collapse.
+#     Parameters
+#     ----------
+#     ete_tree : ete2.tree.TreeNode
+#         The ete2 tree to collapse.
 
-    Returns
-    -------
-    collapsed_tree : ete2.tree.TreeNode
-    """
-    node = ete_tree
-    # Remove a node's parent iff the node's branch length is 0 and the
-    # parent's name is 'NoName', that way we avoid removing named, and
-    # thus possibly informative, nodes.
-    if node.dist == 0 and node.up.name == 'NoName':
-        parent = node.up
-        # grandparent = parent.up
-        # node.detach()
-        for child in [child for child in parent.get_children() if
-                child != node]:
-            # Remove all children except the node whose branch length is
-            # 0.
-            # Ensure that the non-zero distances are preserved.
-            dist = child.dist
-            node.add_child(child.detach(), dist=dist)
-        # Make sure that the children are all detached from the parent.
-        # This can be removed once tested
-        # print(parent.get_children())
-        # assert(len(parent.get_children()) == 0)
-        # Remove the empty parent, connecting the node to the
-        # grandparent with the branch length preserved.
-        parent.delete(preserve_branch_length=True)
-    # Recurse through all children
-    for child in node.get_children():
-        collapse_null_branches_ete(child)
-    return None
+#     Returns
+#     -------
+#     collapsed_tree : ete2.tree.TreeNode
+#     """
+#     node = ete_tree
+#     # Remove a node's parent iff the node's branch length is 0 and the
+#     # parent's name is 'NoName', that way we avoid removing named, and
+#     # thus possibly informative, nodes.
+#     if node.dist == 0 and node.up.name == 'NoName':
+#         parent = node.up
+#         # grandparent = parent.up
+#         # node.detach()
+#         for child in [child for child in parent.get_children() if
+#                 child != node]:
+#             # Remove all children except the node whose branch length is
+#             # 0.
+#             # Ensure that the non-zero distances are preserved.
+#             dist = child.dist
+#             node.add_child(child.detach(), dist=dist)
+#         # Make sure that the children are all detached from the parent.
+#         # This can be removed once tested
+#         # print(parent.get_children())
+#         # assert(len(parent.get_children()) == 0)
+#         # Remove the empty parent, connecting the node to the
+#         # grandparent with the branch length preserved.
+#         parent.delete(preserve_branch_length=True)
+#     # Recurse through all children
+#     for child in node.get_children():
+#         collapse_null_branches_ete(child)
+#     return None
 
 def format_nodes(tree, tabfile,
         color_column=None,
