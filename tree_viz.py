@@ -293,6 +293,48 @@ def _collapse_null_branches(nkx_tree):
     # no-op so far
     return collapsed_tree
 
+def collapse_null_branches_ete(ete_tree):
+    """
+    Collapse 0 distance branches from an ete2 tree
+    (`ete2.tree.TreeNode`).
+    Applies recursively.
+
+    Parameters
+    ----------
+    ete_tree : ete2.tree.TreeNode
+        The ete2 tree to collapse.
+
+    Returns
+    -------
+    collapsed_tree : ete2.tree.TreeNode
+    """
+    node = ete_tree
+    # Remove a node's parent iff the node's branch length is 0 and the
+    # parent's name is 'NoName', that way we avoid removing named, and
+    # thus possibly informative, nodes.
+    if node.dist == 0 and node.up.name == 'NoName':
+        parent = node.up
+        # grandparent = parent.up
+        # node.detach()
+        for child in [child for child in parent.get_children() if
+                child != node]:
+            # Remove all children except the node whose branch length is
+            # 0.
+            # Ensure that the non-zero distances are preserved.
+            dist = child.dist
+            node.add_child(child.detach(), dist=dist)
+        # Make sure that the children are all detached from the parent.
+        # This can be removed once tested
+        # print(parent.get_children())
+        # assert(len(parent.get_children()) == 0)
+        # Remove the empty parent, connecting the node to the
+        # grandparent with the branch length preserved.
+        parent.delete(preserve_branch_length=True)
+    # Recurse through all children
+    for child in node.get_children():
+        collapse_null_branches_ete(child)
+    return None
+
 def format_nodes(tree, tabfile,
         color_column=None,
         size_column=None,
