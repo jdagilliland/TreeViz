@@ -5,7 +5,10 @@ setup(
         version='0.1.1dev',
         author='J. D. A. Gilliland',
         author_email='jdagilliland@gmail.com',
-        py_modules=['tree_viz'],
+        packages=[
+                'tree_viz',
+                'tree_viz.test',
+                ],
         scripts=['bin/treeviz'],
         install_requires=[
             'numpy',
