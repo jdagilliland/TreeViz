@@ -121,8 +121,8 @@ def print_tree(fname, **kwarg):
     outfile = kwarg.pop('outfile',None)
     if outfile:
         tree.render(outfile,
-#                w=841,
-#                h=1189,
+                # w=841,
+                # h=1189,
                 units='mm',
                 tree_style=ete_treestyle,
                 )
@@ -534,8 +534,8 @@ def _treeviz_main():
         description='Visualize newick trees',
         )
     parser.add_argument('treefile',
-    #        nargs=1,
-    #        dest='treefile',
+            # nargs=1,
+            # dest='treefile',
         )
     parser.add_argument('-t', '--tabfile', dest='tabfile')
     parser.add_argument('-r', '--render', dest='outfile', default=None)
