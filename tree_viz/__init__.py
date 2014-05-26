@@ -23,6 +23,8 @@ class GermTree(ete2.coretype.tree.TreeNode):
         with open(tabfile,'rb') as f:
             reader = csv.DictReader(f,delimiter='\t')
             self.lst_dict_tab_entries = [row for row in reader]
+        print("""Number of TAB entries read: {:d}""".format(
+            len(self.lst_dict_tab_entries)))
         return None
 
     def set_phyfile(self, phyfile):
@@ -197,7 +199,10 @@ class GermTree(ete2.coretype.tree.TreeNode):
             try:
                 dict_entry = _get_node_entry(node.name,
                         self.lst_dict_tab_entries)
-            except ValueError:
+            except ValueError as exc:
+                print(""" Node info not found in tab file.""")
+                print(exc)
+                node.add_feature('group', 'internal')
                 continue
             # get color data (default: 'none')
             color_data = dict_entry.get(color_column)
@@ -356,7 +361,8 @@ class GermTree(ete2.coretype.tree.TreeNode):
                 self.traverse()}
         lst_puresub = list()
         for group in set_group:
-            lineages = list(self.get_monophyletic(values=[group],
+            lineages = list(self.get_monophyletic(values=[group,
+            'internal'],
                     target_attr='group'))
             print(str(group) + '----------------------------------------------')
             for lineage in lineages:
