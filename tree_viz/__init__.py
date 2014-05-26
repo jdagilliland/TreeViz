@@ -247,6 +247,10 @@ class GermTree(ete2.coretype.tree.TreeNode):
             edge lengths into proper mutation counts.
         outputdir : str, optional
             Destination for output tree analysis files. (default: False)
+        correct_lengths : bool, optional
+            Whether or not to use the information in the *.phy file to
+            correct branch lengths expressed as distances to branch
+            lengths as mutation counts. (default: False)
 
         Returns
         -------
@@ -268,6 +272,7 @@ class GermTree(ete2.coretype.tree.TreeNode):
         # if set not to display, don't, otherwise display tree
         display = kwarg.pop('display', True)
         # print(outputdir)
+        correct_lengths = kwarg.pop('correct_lengths', False)
 
         tree = cls(fname)
         tree.ete_treestyle = _get_ete_treestyle()
@@ -275,10 +280,11 @@ class GermTree(ete2.coretype.tree.TreeNode):
         if phyfile:
             tree.set_phyfile(phyfile)
             tree.root_tree()
-        else:
+        if not correct_lengths:
             len_seq = 1
-            print(('''Since no *.phy file was provided, branch lengths will be''' +
-                    ''' distances rather than mutation counts''').format())
+            print("""Not correcting branch lengths...""")
+            # print(('''Branch lengths will be''' +
+            #         ''' distances rather than mutation counts''').format())
 
         # color, size nodes
         dict_color = tree.format_nodes(
@@ -589,6 +595,17 @@ def _treeviz_main():
             default=None,
             const=os.getcwd(),
             nargs='?',
+            )
+    parser.add_argument('-l', '--length-correct', dest='correct_lengths',
+            action='store_true',
+            help="""
+            Use if branch lengths in the target tree are expressed as
+            distances rather than mutation counts. (default: False)
+            You must take care to use this option only when appropriate;
+            misuse could result in trees with nonsensically long branch
+            lengths, and worse, mistaken analyses based on mutation
+            counts.
+            """,
             )
     argspace = parser.parse_args()
     GermTree.print_tree(argspace.treefile,
