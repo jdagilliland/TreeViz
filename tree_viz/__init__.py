@@ -58,6 +58,54 @@ class GermTree(ete2.coretype.tree.TreeNode):
             print('''Could not find node named {name} in this tree, the tree
             may be inappropriately rooted.'''.format(name=self.germname))
 
+    def analyze_tree(self, outputdir):
+        """
+        Perform analyses on the tree, write the output files in
+        outputdir.
+        """
+        lineages_monophyly = self.find_pure_subtrees()
+        n_lineage_monophyly = len(lineages_monophyly)
+        print('Number of pure lineages identified {:d}'.format(
+            n_lineage_monophyly))
+        for iI, (group, lineage) in enumerate(lineages_monophyly):
+            print(group)
+            print(lineage.get_ascii())
+            try:
+                os.listdir(outputdir)
+            except:
+                os.makedirs(outputdir)
+            print('Writing output files...')
+            # 4-digit output file basename
+            outbasename = os.path.join(outputdir, 'monophyly_' + group +
+                    '_{:04d}'.format(iI))
+            # print Newick tree to file
+            treefname = outbasename + '.tree'
+            lineage.write(outfile=treefname)
+            # print ascii tree to file
+            outfname = outbasename + '.asc'
+            open(outfname,'wb').write(lineage.get_ascii())
+        lineages_dist = self.find_distant_subtrees(root_node=self.germnode)
+        n_lineage_dist = len(lineages_dist)
+        print('Number of distant lineages identified {:d}'.format(
+            n_lineage_dist))
+        for iI, lineage in enumerate(lineages_dist):
+            print(lineage.get_ascii())
+            try:
+                os.listdir(outputdir)
+            except:
+                os.makedirs(outputdir)
+            print('Writing output files...')
+            # 4-digit output file basename
+            outbasename = os.path.join(outputdir, 'dist_' +
+                    '_{:04d}'.format(iI))
+            # print Newick tree to file
+            treefname = outbasename + '.tree'
+            lineage.write(outfile=treefname)
+            # print ascii tree to file
+            outfname = outbasename + '.asc'
+            open(outfname,'wb').write(lineage.get_ascii())
+
+
     def find_distant_subtrees(self,
             root_node=None,
             dist_lim=4):
@@ -200,8 +248,8 @@ class GermTree(ete2.coretype.tree.TreeNode):
                 dict_entry = _get_node_entry(node.name,
                         self.lst_dict_tab_entries)
             except ValueError as exc:
-                print(""" Node info not found in tab file.""")
-                print(exc)
+                # print(""" Node info not found in tab file.""")
+                # print(exc)
                 node.add_feature('group', 'internal')
                 continue
             # get color data (default: 'none')
@@ -281,7 +329,7 @@ class GermTree(ete2.coretype.tree.TreeNode):
             tree.set_phyfile(phyfile)
             tree.root_tree()
         if not correct_lengths:
-            len_seq = 1
+            tree.len_seq = 1
             print("""Not correcting branch lengths...""")
             # print(('''Branch lengths will be''' +
             #         ''' distances rather than mutation counts''').format())
@@ -293,49 +341,8 @@ class GermTree(ete2.coretype.tree.TreeNode):
                 len_seq=tree.len_seq,
                 )
         tree.collapse_null_branches()
-        lineages_monophyly = tree.find_pure_subtrees()
-        n_lineage_monophyly = len(lineages_monophyly)
-        print('Number of pure lineages identified {:d}'.format(
-            n_lineage_monophyly))
-        for iI, (group, lineage) in enumerate(lineages_monophyly):
-            print(group)
-            print(lineage.get_ascii())
-            if outputdir:
-                try:
-                    os.listdir(outputdir)
-                except:
-                    os.makedirs(outputdir)
-                print('Writing output files...')
-                # 4-digit output file basename
-                outbasename = os.path.join(outputdir, 'monophyly_' + group +
-                        '_{:04d}'.format(iI))
-                # print Newick tree to file
-                treefname = outbasename + '.tree'
-                lineage.write(outfile=treefname)
-                # print ascii tree to file
-                outfname = outbasename + '.asc'
-                open(outfname,'wb').write(lineage.get_ascii())
-        lineages_dist = tree.find_distant_subtrees(root_node=tree.germnode)
-        n_lineage_dist = len(lineages_dist)
-        print('Number of distant lineages identified {:d}'.format(
-            n_lineage_dist))
-        for iI, lineage in enumerate(lineages_dist):
-            print(lineage.get_ascii())
-            if outputdir:
-                try:
-                    os.listdir(outputdir)
-                except:
-                    os.makedirs(outputdir)
-                print('Writing output files...')
-                # 4-digit output file basename
-                outbasename = os.path.join(outputdir, 'dist_' +
-                        '_{:04d}'.format(iI))
-                # print Newick tree to file
-                treefname = outbasename + '.tree'
-                lineage.write(outfile=treefname)
-                # print ascii tree to file
-                outfname = outbasename + '.asc'
-                open(outfname,'wb').write(lineage.get_ascii())
+        if outputdir:
+            tree.analyze_tree(outputdir)
         # show filename
         tree.ete_treestyle.title.add_face(ete2.TextFace(fname), column=0)
         _add_legend(tree.ete_treestyle, tree.dict_color)
