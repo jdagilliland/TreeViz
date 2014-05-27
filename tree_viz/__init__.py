@@ -569,8 +569,22 @@ def _treeviz_main():
             # nargs=1,
             # dest='treefile',
         )
-    parser.add_argument('-t', '--tabfile', dest='tabfile')
-    parser.add_argument('-r', '--render', dest='outfile', default=None)
+    parser.add_argument('-t', '--tabfile', dest='tabfile',
+            help="""
+            Provide a TAB file which should contain all of the relevant
+            information about each sequence in the tree, especially the
+            columns specified by COLOR_GROUP and COPY_NUMBER
+            """,
+            )
+    parser.add_argument('-r', '--render', dest='outfile', default=None,
+            help="""
+            If provided, render the graphical tree as a file.
+            This option can be provided instead of showing the tree
+            interactively.
+            In future versions, this option may be able to be provided
+            in addition to interactively displaying the tree.
+            """,
+            )
     parser.add_argument('-n', '--no-display', dest='display',
             action='store_false',
             help="""
@@ -583,13 +597,35 @@ def _treeviz_main():
     parser.add_argument('-c', '--color-column',
             dest='color',
             default='COLOR_GROUP',
+            help="""
+            The column of the TAB file to use to color the tree's nodes.
+            A color will be assigned to each unique value in the color
+            column, so take care not to use a column that contains data
+            unique to each sequence, otherwise the colors will be
+            meaningless, as will be any analyses performed.
+            This option should usually be provided, since the default is
+            only useful if the TAB file was tailor-made to suit the
+            default. (default: COLOR_GROUP)
+            """,
             )
     parser.add_argument('-s', '--size-column',
             dest='size',
             default='COPY_NUMBER',
+            help="""
+            The column of the TAB file to use to inform the sizes of the
+            nodes displayed.
+            There is no good reason for a user to employ this option,
+            unless they are dealing with a TAB file that has a different
+            label for the COPY_NUMBER column. (default: COPY_NUMBER)
+            """,
             )
     parser.add_argument('-p', '--phy-file',
             dest='phyfile',
+            help="""
+            The PHY file to use to set the length of the sequences, as
+            well as the root node, which is assumed to be the first
+            sequence found in the PHY file.
+            """,
             )
     parser.add_argument('-o', '--output-dir',
             dest='outputdir',
