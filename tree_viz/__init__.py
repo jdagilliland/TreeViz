@@ -659,6 +659,7 @@ def _treeviz_main():
         phyfile=argspace.phyfile,
         outputdir=argspace.outputdir,
         display=argspace.display,
+        correct_lengths=argspace.correct_lengths,
         )
     return None
 
