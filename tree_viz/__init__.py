@@ -58,18 +58,35 @@ class GermTree(ete2.coretype.tree.TreeNode):
             print('''Could not find node named {name} in this tree, the tree
             may be inappropriately rooted.'''.format(name=self.germname))
 
-    def analyze_tree(self, outputdir):
+    def analyze_tree(self, outputdir,
+            tab_out=False,
+            verbose=False,
+            ):
         """
         Perform analyses on the tree, write the output files in
         outputdir.
+
+        Parameters
+        ----------
+        outputdir : str
+            The name of the directory into which to place analysis
+            files.
+        tab_out : bool, optional
+            Whether or not to output new TAB files based on the
+            classifications arrived at by tree analysis. (default:
+            False)
+        verbose : bool, optional
+            Whether or not to print identified subtrees to terminal
+            (default: False)
         """
         lineages_monophyly = self.find_pure_subtrees()
         n_lineage_monophyly = len(lineages_monophyly)
         print('Number of pure lineages identified {:d}'.format(
             n_lineage_monophyly))
         for iI, (group, lineage) in enumerate(lineages_monophyly):
-            print(group)
-            print(lineage.get_ascii())
+            if verbose:
+                print(group)
+                print(lineage.get_ascii())
             try:
                 os.listdir(outputdir)
             except:
@@ -89,7 +106,8 @@ class GermTree(ete2.coretype.tree.TreeNode):
         print('Number of distant lineages identified {:d}'.format(
             n_lineage_dist))
         for iI, lineage in enumerate(lineages_dist):
-            print(lineage.get_ascii())
+            if verbose:
+                print(lineage.get_ascii())
             try:
                 os.listdir(outputdir)
             except:
@@ -137,13 +155,13 @@ class GermTree(ete2.coretype.tree.TreeNode):
             root_node = self
             print('No root node specified. Using provided tree.')
         distance = self.get_distance(root_node)
-        print('Distance between node and root: {:0.2f}'.format(distance))
-        print('dist_lim: {:0.2f}'.format(dist_lim))
+        # print('Distance between node and root: {:0.2f}'.format(distance))
+        # print('dist_lim: {:0.2f}'.format(dist_lim))
         if distance >= dist_lim:
             # If this node is already far enough away from root, return it,
             # skipping all descendants.
             print('Found distant subtree, skipping descendants')
-            print(self)
+            # print(self)
             return [self]
         else:
             # If this node is still too close to root, iterate through each
@@ -152,8 +170,8 @@ class GermTree(ete2.coretype.tree.TreeNode):
             print('Attempting to find distant subtrees among children nodes')
             lst_distsub = list()
             for child in self.get_children():
-                print(child)
-                print(root_node)
+                # print(child)
+                # print(root_node)
                 lst_distsub.extend(child.find_distant_subtrees(
                     root_node=root_node,
                     dist_lim=dist_lim))
@@ -377,9 +395,9 @@ class GermTree(ete2.coretype.tree.TreeNode):
             lineages = list(self.get_monophyletic(values=[group,
             'internal'],
                     target_attr='group'))
-            print(str(group) + '----------------------------------------------')
-            for lineage in lineages:
-                print(lineage.get_ascii())
+            # print(str(group) + '----------------------------------------------')
+            # for lineage in lineages:
+            #     print(lineage.get_ascii())
             lst_puresub.extend([(group, lineage) for lineage in lineages])
         return lst_puresub
 
