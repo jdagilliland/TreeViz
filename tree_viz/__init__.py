@@ -5,6 +5,9 @@ import os
 import ete2
 import numpy as np
 import Bio
+import fasta2tab
+
+LINEAGE_COL_NAME = 'lineage0'
 
 class GermTree(ete2.coretype.tree.TreeNode):
     """
@@ -79,11 +82,11 @@ class GermTree(ete2.coretype.tree.TreeNode):
             Whether or not to print identified subtrees to terminal
             (default: False)
         """
-        lineages_monophyly = self.find_pure_subtrees()
-        n_lineage_monophyly = len(lineages_monophyly)
+        self.lineages_monophyly = self.find_pure_subtrees()
+        n_lineage_monophyly = len(self.lineages_monophyly)
         print('Number of pure lineages identified {:d}'.format(
             n_lineage_monophyly))
-        for iI, (group, lineage) in enumerate(lineages_monophyly):
+        for iI, (group, lineage) in enumerate(self.lineages_monophyly):
             if verbose:
                 print(group)
                 print(lineage.get_ascii())
@@ -101,11 +104,14 @@ class GermTree(ete2.coretype.tree.TreeNode):
             # print ascii tree to file
             outfname = outbasename + '.asc'
             open(outfname,'wb').write(lineage.get_ascii())
-        lineages_dist = self.find_distant_subtrees(root_node=self.germnode)
-        n_lineage_dist = len(lineages_dist)
+        self.lineages_dist = self.find_distant_subtrees(root_node=self.germnode)
+        self.tab_classification(self.lineages_dist, outputdir=outputdir,
+                # outname='tabout.tab',
+                )
+        n_lineage_dist = len(self.lineages_dist)
         print('Number of distant lineages identified {:d}'.format(
             n_lineage_dist))
-        for iI, lineage in enumerate(lineages_dist):
+        for iI, lineage in enumerate(self.lineages_dist):
             if verbose:
                 print(lineage.get_ascii())
             try:
@@ -123,6 +129,31 @@ class GermTree(ete2.coretype.tree.TreeNode):
             outfname = outbasename + '.asc'
             open(outfname,'wb').write(lineage.get_ascii())
 
+    def tab_classification(self,
+            lst_lineages,
+            **kwarg):
+        # lst_dict_tab_entries_new = list()
+        outputdir = kwarg.get('outputdir', os.getcwd())
+        outname = kwarg.get('outname', 'tabout.tab')
+        fname_tab = os.path.join(outputdir, outname)
+        classification_column = LINEAGE_COL_NAME
+        for lineage in lst_lineages:
+            lineage_id = get_lineage_id()
+            for node in lineage:
+                try:
+                    node_entry = _get_node_entry(node.name,
+                            self.lst_dict_tab_entries)
+                    node_entry[classification_column] = lineage_id
+                    pass
+                except:
+                    print('Skipping internal node...')
+                    pass
+                pass
+            pass
+        # Write tabfile
+        # fasta2tab.write_tab_file(fname_tab, self.lst_dict_tab_entries)
+        write_tabfile(fname_tab, self.lst_dict_tab_entries)
+        return None
 
     def find_distant_subtrees(self,
             root_node=None,
@@ -273,6 +304,9 @@ class GermTree(ete2.coretype.tree.TreeNode):
             # get color data (default: 'none')
             color_data = dict_entry.get(color_column)
             color = self.dict_color.get(color_data, 'none')
+            # This is what is causing problems for finding monophyletic
+            # lineages. The feature 'group' is overwritten after being
+            # set to 'internal' if it is an inferred node.
             node.add_feature('group', color_data)
             # print(node.group)
             # get size data (default: 1, assume single copy)
@@ -414,6 +448,26 @@ class GermTree(ete2.coretype.tree.TreeNode):
         # Adds the name face to the image at the preferred position
         ete2.faces.add_face_to_node(name_face, node, column=0,
             position="branch-right")
+
+def write_tabfile(fname_tab, lst_dict_entries):
+    """
+    Write a new TAB file from a list of dict entries.
+    """
+    tpl_fields = list(fasta2tab.tpl_cols)
+    for entry in lst_dict_entries:
+        tpl_fields.extend([field for field in entry.keys()
+            if field not in tpl_fields])
+        pass
+    with open(fname_tab, 'w') as f:
+        tab_writer = csv.DictWriter(f, tpl_fields,
+                extrasaction='ignore',
+                delimiter='\t')
+        tab_writer.writeheader()
+        for entry in lst_dict_entries:
+            tab_writer.writerow(entry)
+            pass
+        pass
+    return None
 
 def nwk2nkx(fname):
     """
@@ -569,6 +623,13 @@ def _get_color_dict(lst_col_data):
     for iI, data in enumerate(set_data):
         dict_color[data] = lst_color[iI]
     return dict_color
+
+def _get_lineage_id(**kwarg):
+    # Eventually, this will be a different function for generating lineage
+    # IDs
+    return None
+# get_lineage_id = _get_lineage_id
+get_lineage_id = fasta2tab.get_uuid
 
 def _random_color():
     tpl_color = np.random.rand(3,)
