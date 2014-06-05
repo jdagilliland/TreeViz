@@ -2,9 +2,21 @@
 import csv
 import os
 
-import ete2
 import numpy as np
 import Bio
+try:
+    ## First try ete2.
+    import ete2
+except ImportError as exc:
+    print('''Module 'ete2' not found, looking for 'ete_dev'...''')
+    try:
+        ## Since ete2 was not found, try to import ete_dev as ete2.
+        import ete_dev as ete2
+        print('''Using 'ete_dev'.''')
+    except ImportError:
+        ## If neither are found, you are in trouble.
+        print('''Module 'ete_dev' not found, make sure you are using the
+                right python.''')
 
 class GermTree(ete2.coretype.tree.TreeNode):
     """
@@ -104,7 +116,6 @@ class GermTree(ete2.coretype.tree.TreeNode):
             # print ascii tree to file
             outfname = outbasename + '.asc'
             open(outfname,'wb').write(lineage.get_ascii())
-
 
     def find_distant_subtrees(self,
             root_node=None,
