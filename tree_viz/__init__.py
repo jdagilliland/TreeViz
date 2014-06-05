@@ -105,13 +105,15 @@ class GermTree(ete2.coretype.tree.TreeNode):
             outfname = outbasename + '.asc'
             open(outfname,'wb').write(lineage.get_ascii())
         self.lineages_dist = self.find_distant_subtrees(root_node=self.germnode)
-        self.tab_classification(self.lineages_dist, outputdir=outputdir,
+        lst_tpl_lineageid = self.tab_classification(
+                self.lineages_dist,
+                outputdir=outputdir,
                 # outname='tabout.tab',
                 )
         n_lineage_dist = len(self.lineages_dist)
         print('Number of distant lineages identified {:d}'.format(
             n_lineage_dist))
-        for iI, lineage in enumerate(self.lineages_dist):
+        for iI, (lineage_id, lineage) in enumerate(lst_tpl_lineageid):
             if verbose:
                 print(lineage.get_ascii())
             try:
@@ -120,8 +122,8 @@ class GermTree(ete2.coretype.tree.TreeNode):
                 os.makedirs(outputdir)
             print('Writing output files...')
             # 4-digit output file basename
-            outbasename = os.path.join(outputdir, 'dist_' +
-                    '_{:04d}'.format(iI))
+            outbasename = os.path.join(outputdir,
+                    ('dist_' + lineage_id).format(iI))
             # print Newick tree to file
             treefname = outbasename + '.tree'
             lineage.write(outfile=treefname)
@@ -137,6 +139,7 @@ class GermTree(ete2.coretype.tree.TreeNode):
         outname = kwarg.get('outname', 'tabout.tab')
         fname_tab = os.path.join(outputdir, outname)
         classification_column = LINEAGE_COL_NAME
+        lst_tpl_lineageid = list()
         for lineage in lst_lineages:
             lineage_id = get_lineage_id()
             for node in lineage:
@@ -149,11 +152,14 @@ class GermTree(ete2.coretype.tree.TreeNode):
                     print('Skipping internal node...')
                     pass
                 pass
+            # Append each labelled lineage and its label list to be
+            # returned
+            lst_tpl_lineageid.append((lineage_id, lineage,))
             pass
         # Write tabfile
         # fasta2tab.write_tab_file(fname_tab, self.lst_dict_tab_entries)
         write_tabfile(fname_tab, self.lst_dict_tab_entries)
-        return None
+        return lst_tpl_lineageid
 
     def find_distant_subtrees(self,
             root_node=None,
