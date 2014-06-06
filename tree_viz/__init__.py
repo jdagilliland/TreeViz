@@ -5,7 +5,9 @@ import os
 import ete2
 import numpy as np
 import Bio
+
 import fasta2tab
+import sequences
 
 LINEAGE_COL_NAME = 'lineage0'
 
@@ -19,13 +21,15 @@ class GermTree(ete2.coretype.tree.TreeNode):
         # initialize value of sequence length to 1
         self.len_seq = 1
 
-    def set_tabfile(self, tabfile):
+    def set_tabfile(self, lst_tabfile):
         """
         Read in data from a tabfile to which any method may refer.
         """
-        with open(tabfile,'rb') as f:
-            reader = csv.DictReader(f,delimiter='\t')
-            self.lst_dict_tab_entries = [row for row in reader]
+        self.lst_dict_tab_entries = list()
+        for fname in lst_tabfile:
+            with open(fname, 'rU') as f:
+                reader = csv.DictReader(f,delimiter='\t')
+                self.lst_dict_tab_entries.extend([row for row in reader])
         print("""Number of TAB entries read: {:d}""".format(
             len(self.lst_dict_tab_entries)))
         return None
@@ -604,7 +608,9 @@ def _get_ete_treestyle():
 
 def _get_node_entry(nodename, lst_dict_entries):
     for dict_entry in lst_dict_entries:
-        if dict_entry['SEQUENCE_ID'][-9:] == nodename:
+        ##### Sloppy comment-based configuration!!!!!
+        # if dict_entry['SEQUENCE_ID'][-9:] == nodename:
+        if dict_entry['seqID'][-9:] == nodename:
             return dict_entry
         else: continue
     raise ValueError('Nodename {name} not found'.format(name=nodename))
@@ -655,6 +661,7 @@ def _treeviz_main():
             # dest='treefile',
         )
     parser.add_argument('-t', '--tabfile', dest='tabfile',
+            action='append',
             help="""
             Provide a TAB file which should contain all of the relevant
             information about each sequence in the tree, especially the
@@ -736,6 +743,9 @@ def _treeviz_main():
             """,
             )
     argspace = parser.parse_args()
+    print('''Using the following files as tab files''')
+    for fname in argspace.tabfile:
+        print(fname)
     GermTree.print_tree(argspace.treefile,
         tabfile=argspace.tabfile,
         outfile=argspace.outfile,
