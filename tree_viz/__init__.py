@@ -10,6 +10,9 @@ import fasta2tab
 import sequences
 
 LINEAGE_COL_NAME = 'lineage0'
+##### Sloppy comment-based configuration!!!!!
+# SEQID_COL = 'seqID'
+SEQID_COL = 'SEQUENCE_ID'
 
 class GermTree(ete2.coretype.tree.TreeNode):
     """
@@ -25,12 +28,14 @@ class GermTree(ete2.coretype.tree.TreeNode):
         """
         Read in data from a tabfile to which any method may refer.
         """
-        self.lst_dict_tab_entries = list()
+        if not hasattr(self, 'lst_phy_names'):
+            raise Exception('''First use 'set_phyfile'.''')
         for fname in lst_tabfile:
             with open(fname, 'rU') as f:
                 reader = csv.DictReader(f,delimiter='\t')
-                self.lst_dict_tab_entries.extend([row for row in reader])
-        print("""Number of TAB entries read: {:d}""".format(
+                self.lst_dict_tab_entries = [row for row in reader
+                    if row[SEQID_COL][-9:] in self.lst_phy_names]
+        print("""Number of TAB entries read into memory: {:d}""".format(
             len(self.lst_dict_tab_entries)))
         return None
 
@@ -39,13 +44,16 @@ class GermTree(ete2.coretype.tree.TreeNode):
         Read in data from a PHYLIP formatted *.phy file.
         This will set the sequence length properly, as well as root the
         tree at the first sequence found in the PHY file.
+        This also sets the PHYLIP entries used so that only the relevant
+        lines from the TAB file will be read into memory.
         """
         with open(phyfile, 'rt') as phyfileobj:
             headrow = phyfileobj.readline()
-            germrow = phyfileobj.readline()
+            self.lst_phy_entries = [row.split() for row in phyfileobj]
+        self.lst_phy_names = [tpl[0] for tpl in self.lst_phy_entries]
         self.len_seq = int(headrow.split()[1])
         print('Set sequence length from {file0}'.format(file0=phyfile))
-        self.germname = germrow.split()[0]
+        self.germname = self.lst_phy_names[0]
 
     def root_tree(self):
         """
@@ -386,10 +394,9 @@ class GermTree(ete2.coretype.tree.TreeNode):
 
         tree = cls(fname)
         tree.ete_treestyle = _get_ete_treestyle()
+        tree.set_phyfile(phyfile)
         tree.set_tabfile(tabfile)
-        if phyfile:
-            tree.set_phyfile(phyfile)
-            tree.root_tree()
+        tree.root_tree()
         if not correct_lengths:
             tree.len_seq = 1
             print("""Not correcting branch lengths...""")
@@ -608,9 +615,7 @@ def _get_ete_treestyle():
 
 def _get_node_entry(nodename, lst_dict_entries):
     for dict_entry in lst_dict_entries:
-        ##### Sloppy comment-based configuration!!!!!
-        # if dict_entry['SEQUENCE_ID'][-9:] == nodename:
-        if dict_entry['seqID'][-9:] == nodename:
+        if dict_entry[SEQID_COL][-9:] == nodename:
             return dict_entry
         else: continue
     raise ValueError('Nodename {name} not found'.format(name=nodename))
