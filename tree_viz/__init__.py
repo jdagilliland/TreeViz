@@ -30,11 +30,12 @@ class GermTree(ete2.coretype.tree.TreeNode):
         """
         if not hasattr(self, 'lst_phy_names'):
             raise Exception('''First use 'set_phyfile'.''')
+        self.lst_dict_tab_entries = list()
         for fname in lst_tabfile:
             with open(fname, 'rU') as f:
                 reader = csv.DictReader(f,delimiter='\t')
-                self.lst_dict_tab_entries = [row for row in reader
-                    if row[SEQID_COL][-9:] in self.lst_phy_names]
+                self.lst_dict_tab_entries.extend([row for row in reader
+                    if row[id_col][-9:] in self.lst_phy_names])
         print("""Number of TAB entries read into memory: {:d}""".format(
             len(self.lst_dict_tab_entries)))
         return None
@@ -670,7 +671,9 @@ def _treeviz_main():
             help="""
             Provide a TAB file which should contain all of the relevant
             information about each sequence in the tree, especially the
-            columns specified by COLOR_GROUP and COPY_NUMBER
+            columns specified by COLOR_GROUP and COPY_NUMBER.
+            Multiple TAB files can be provided by using this argument
+            multiple times.
             """,
             )
     parser.add_argument('-r', '--render', dest='outfile', default=None,
