@@ -4,3 +4,7 @@ if [ -d "/opt/local/Library/Frameworks/Python.framework/Versions/2.7/bin" ] ; th
 else
     echo "I could not find the MacPorts version of python2.7; is it installed?"
 fi
+
+if [ -d "/Users/$USER/Library/Python/2.7/bin" ] ; then
+    PATH="/Users/$USER/Library/Python/2.7/bin:$PATH"
+fi
