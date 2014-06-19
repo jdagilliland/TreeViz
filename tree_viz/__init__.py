@@ -18,6 +18,32 @@ except ImportError as exc:
         print('''Module 'ete_dev' not found, make sure you are using the
                 right python.''')
 
+import fasta2tab
+import sequences
+
+LINEAGE_COL_NAME = 'lineage0'
+
+def set_header_rev(header_rev):
+    ## Switch some global variables based on header rev
+    ## Could there be a better way to do this?
+    global id_col
+    global seq_col
+    global clone_col
+    global dmask_col
+    if header_rev == 0:
+        id_col = 'SEQUENCE_ID'
+        seq_col = 'SEQUENCE'
+        clone_col = 'CLONE'
+        dmask_col = 'GERMLINE_GAP_DMASK'
+    elif header_rev == 1:
+        id_col = 'seqID'
+        seq_col = 'sequence'
+        clone_col = 'cloneID'
+        dmask_col = 'germline'
+    else:
+        raise ValueError(
+            'You have selected an invalid header_rev: {:s}'.format(header_rev))
+
 class GermTree(ete2.coretype.tree.TreeNode):
     """
     Class to encapsulate the many actions that I need to make on
@@ -28,14 +54,19 @@ class GermTree(ete2.coretype.tree.TreeNode):
         # initialize value of sequence length to 1
         self.len_seq = 1
 
-    def set_tabfile(self, tabfile):
+    def set_tabfile(self, lst_tabfile):
         """
         Read in data from a tabfile to which any method may refer.
         """
-        with open(tabfile,'rb') as f:
-            reader = csv.DictReader(f,delimiter='\t')
-            self.lst_dict_tab_entries = [row for row in reader]
-        print("""Number of TAB entries read: {:d}""".format(
+        if not hasattr(self, 'lst_phy_names'):
+            raise Exception('''First use 'set_phyfile'.''')
+        self.lst_dict_tab_entries = list()
+        for fname in lst_tabfile:
+            with open(fname, 'rU') as f:
+                reader = csv.DictReader(f,delimiter='\t')
+                self.lst_dict_tab_entries.extend([row for row in reader
+                    if row[id_col][-9:] in self.lst_phy_names])
+        print("""Number of TAB entries read into memory: {:d}""".format(
             len(self.lst_dict_tab_entries)))
         return None
 
@@ -44,13 +75,16 @@ class GermTree(ete2.coretype.tree.TreeNode):
         Read in data from a PHYLIP formatted *.phy file.
         This will set the sequence length properly, as well as root the
         tree at the first sequence found in the PHY file.
+        This also sets the PHYLIP entries used so that only the relevant
+        lines from the TAB file will be read into memory.
         """
         with open(phyfile, 'rt') as phyfileobj:
             headrow = phyfileobj.readline()
-            germrow = phyfileobj.readline()
+            self.lst_phy_entries = [row.split() for row in phyfileobj]
+        self.lst_phy_names = [tpl[0] for tpl in self.lst_phy_entries]
         self.len_seq = int(headrow.split()[1])
         print('Set sequence length from {file0}'.format(file0=phyfile))
-        self.germname = germrow.split()[0]
+        self.germname = self.lst_phy_names[0]
 
     def root_tree(self):
         """
@@ -70,18 +104,35 @@ class GermTree(ete2.coretype.tree.TreeNode):
             print('''Could not find node named {name} in this tree, the tree
             may be inappropriately rooted.'''.format(name=self.germname))
 
-    def analyze_tree(self, outputdir):
+    def analyze_tree(self, outputdir,
+            tab_out=False,
+            verbose=False,
+            ):
         """
         Perform analyses on the tree, write the output files in
         outputdir.
+
+        Parameters
+        ----------
+        outputdir : str
+            The name of the directory into which to place analysis
+            files.
+        tab_out : bool, optional
+            Whether or not to output new TAB files based on the
+            classifications arrived at by tree analysis. (default:
+            False)
+        verbose : bool, optional
+            Whether or not to print identified subtrees to terminal
+            (default: False)
         """
-        lineages_monophyly = self.find_pure_subtrees()
-        n_lineage_monophyly = len(lineages_monophyly)
+        self.lineages_monophyly = self.find_pure_subtrees()
+        n_lineage_monophyly = len(self.lineages_monophyly)
         print('Number of pure lineages identified {:d}'.format(
             n_lineage_monophyly))
-        for iI, (group, lineage) in enumerate(lineages_monophyly):
-            print(group)
-            print(lineage.get_ascii())
+        for iI, (group, lineage) in enumerate(self.lineages_monophyly):
+            if verbose:
+                print(group)
+                print(lineage.get_ascii())
             try:
                 os.listdir(outputdir)
             except:
@@ -96,26 +147,62 @@ class GermTree(ete2.coretype.tree.TreeNode):
             # print ascii tree to file
             outfname = outbasename + '.asc'
             open(outfname,'wb').write(lineage.get_ascii())
-        lineages_dist = self.find_distant_subtrees(root_node=self.germnode)
-        n_lineage_dist = len(lineages_dist)
+        self.lineages_dist = self.find_distant_subtrees(root_node=self.germnode)
+        lst_tpl_lineageid = self.tab_classification(
+                self.lineages_dist,
+                outputdir=outputdir,
+                # outname='tabout.tab',
+                )
+        n_lineage_dist = len(self.lineages_dist)
         print('Number of distant lineages identified {:d}'.format(
             n_lineage_dist))
-        for iI, lineage in enumerate(lineages_dist):
-            print(lineage.get_ascii())
+        for iI, (lineage_id, lineage) in enumerate(lst_tpl_lineageid):
+            if verbose:
+                print(lineage.get_ascii())
             try:
                 os.listdir(outputdir)
             except:
                 os.makedirs(outputdir)
             print('Writing output files...')
             # 4-digit output file basename
-            outbasename = os.path.join(outputdir, 'dist_' +
-                    '_{:04d}'.format(iI))
+            outbasename = os.path.join(outputdir,
+                    ('dist_' + lineage_id).format(iI))
             # print Newick tree to file
             treefname = outbasename + '.tree'
             lineage.write(outfile=treefname)
             # print ascii tree to file
             outfname = outbasename + '.asc'
             open(outfname,'wb').write(lineage.get_ascii())
+
+    def tab_classification(self,
+            lst_lineages,
+            **kwarg):
+        # lst_dict_tab_entries_new = list()
+        outputdir = kwarg.get('outputdir', os.getcwd())
+        outname = kwarg.get('outname', 'tabout.tab')
+        fname_tab = os.path.join(outputdir, outname)
+        classification_column = LINEAGE_COL_NAME
+        lst_tpl_lineageid = list()
+        for lineage in lst_lineages:
+            lineage_id = get_lineage_id()
+            for node in lineage:
+                try:
+                    node_entry = _get_node_entry(node.name,
+                            self.lst_dict_tab_entries)
+                    node_entry[classification_column] = lineage_id
+                    pass
+                except:
+                    print('Skipping internal node...')
+                    pass
+                pass
+            # Append each labelled lineage and its label list to be
+            # returned
+            lst_tpl_lineageid.append((lineage_id, lineage,))
+            pass
+        # Write tabfile
+        # fasta2tab.write_tab_file(fname_tab, self.lst_dict_tab_entries)
+        write_tabfile(fname_tab, self.lst_dict_tab_entries)
+        return lst_tpl_lineageid
 
     def find_distant_subtrees(self,
             root_node=None,
@@ -148,13 +235,13 @@ class GermTree(ete2.coretype.tree.TreeNode):
             root_node = self
             print('No root node specified. Using provided tree.')
         distance = self.get_distance(root_node)
-        print('Distance between node and root: {:0.2f}'.format(distance))
-        print('dist_lim: {:0.2f}'.format(dist_lim))
+        # print('Distance between node and root: {:0.2f}'.format(distance))
+        # print('dist_lim: {:0.2f}'.format(dist_lim))
         if distance >= dist_lim:
             # If this node is already far enough away from root, return it,
             # skipping all descendants.
             print('Found distant subtree, skipping descendants')
-            print(self)
+            # print(self)
             return [self]
         else:
             # If this node is still too close to root, iterate through each
@@ -163,8 +250,8 @@ class GermTree(ete2.coretype.tree.TreeNode):
             print('Attempting to find distant subtrees among children nodes')
             lst_distsub = list()
             for child in self.get_children():
-                print(child)
-                print(root_node)
+                # print(child)
+                # print(root_node)
                 lst_distsub.extend(child.find_distant_subtrees(
                     root_node=root_node,
                     dist_lim=dist_lim))
@@ -184,7 +271,8 @@ class GermTree(ete2.coretype.tree.TreeNode):
         # Remove a node's parent iff the node's branch length is 0 and the
         # parent's name is 'NoName', that way we avoid removing named, and
         # thus possibly informative, nodes.
-        if node.dist == 0 and node.up.name == 'NoName':
+        if (node.dist == 0 and hasattr(node.up, 'name') and
+            node.up.name == 'NoName'):
             parent = node.up
             # grandparent = parent.up
             # node.detach()
@@ -266,6 +354,9 @@ class GermTree(ete2.coretype.tree.TreeNode):
             # get color data (default: 'none')
             color_data = dict_entry.get(color_column)
             color = self.dict_color.get(color_data, 'none')
+            # This is what is causing problems for finding monophyletic
+            # lineages. The feature 'group' is overwritten after being
+            # set to 'internal' if it is an inferred node.
             node.add_feature('group', color_data)
             # print(node.group)
             # get size data (default: 1, assume single copy)
@@ -335,10 +426,9 @@ class GermTree(ete2.coretype.tree.TreeNode):
 
         tree = cls(fname)
         tree.ete_treestyle = _get_ete_treestyle()
+        tree.set_phyfile(phyfile)
         tree.set_tabfile(tabfile)
-        if phyfile:
-            tree.set_phyfile(phyfile)
-            tree.root_tree()
+        tree.root_tree()
         if not correct_lengths:
             tree.len_seq = 1
             print("""Not correcting branch lengths...""")
@@ -388,9 +478,9 @@ class GermTree(ete2.coretype.tree.TreeNode):
             lineages = list(self.get_monophyletic(values=[group,
             'internal'],
                     target_attr='group'))
-            print(str(group) + '----------------------------------------------')
-            for lineage in lineages:
-                print(lineage.get_ascii())
+            # print(str(group) + '----------------------------------------------')
+            # for lineage in lineages:
+            #     print(lineage.get_ascii())
             lst_puresub.extend([(group, lineage) for lineage in lineages])
         return lst_puresub
 
@@ -407,6 +497,26 @@ class GermTree(ete2.coretype.tree.TreeNode):
         # Adds the name face to the image at the preferred position
         ete2.faces.add_face_to_node(name_face, node, column=0,
             position="branch-right")
+
+def write_tabfile(fname_tab, lst_dict_entries):
+    """
+    Write a new TAB file from a list of dict entries.
+    """
+    tpl_fields = list(fasta2tab.tpl_cols)
+    for entry in lst_dict_entries:
+        tpl_fields.extend([field for field in entry.keys()
+            if field not in tpl_fields])
+        pass
+    with open(fname_tab, 'w') as f:
+        tab_writer = csv.DictWriter(f, tpl_fields,
+                extrasaction='ignore',
+                delimiter='\t')
+        tab_writer.writeheader()
+        for entry in lst_dict_entries:
+            tab_writer.writerow(entry)
+            pass
+        pass
+    return None
 
 def nwk2nkx(fname):
     """
@@ -537,7 +647,7 @@ def _get_ete_treestyle():
 
 def _get_node_entry(nodename, lst_dict_entries):
     for dict_entry in lst_dict_entries:
-        if dict_entry['SEQUENCE_ID'][-9:] == nodename:
+        if dict_entry[id_col][-9:] == nodename:
             return dict_entry
         else: continue
     raise ValueError('Nodename {name} not found'.format(name=nodename))
@@ -563,6 +673,13 @@ def _get_color_dict(lst_col_data):
         dict_color[data] = lst_color[iI]
     return dict_color
 
+def _get_lineage_id(**kwarg):
+    # Eventually, this will be a different function for generating lineage
+    # IDs
+    return None
+# get_lineage_id = _get_lineage_id
+get_lineage_id = fasta2tab.get_uuid
+
 def _random_color():
     tpl_color = np.random.rand(3,)
     return _color_3pl2hex(tpl_color)
@@ -581,10 +698,12 @@ def _treeviz_main():
             # dest='treefile',
         )
     parser.add_argument('-t', '--tabfile', dest='tabfile',
+            nargs='*',
             help="""
             Provide a TAB file which should contain all of the relevant
             information about each sequence in the tree, especially the
-            columns specified by COLOR_GROUP and COPY_NUMBER
+            columns specified by COLOR_GROUP and COPY_NUMBER.
+            Multiple TAB files can be provided.
             """,
             )
     parser.add_argument('-r', '--render', dest='outfile', default=None,
@@ -661,7 +780,22 @@ def _treeviz_main():
             counts.
             """,
             )
+    parser.add_argument('--header',
+            dest='header',
+            default=1,
+            type=int,
+            help="""
+            If specified, one can change the version of headers to use.
+            Old-style headers are 0, new-style headers are 1 (default).
+            """,
+            )
     argspace = parser.parse_args()
+    ## Choose which column names to use for PHY file based on header
+    ## rev.
+    set_header_rev(argspace.header)
+    print('''Using the following files as tab files''')
+    for fname in argspace.tabfile:
+        print(fname)
     GermTree.print_tree(argspace.treefile,
         tabfile=argspace.tabfile,
         outfile=argspace.outfile,
