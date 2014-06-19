@@ -10,9 +10,27 @@ import fasta2tab
 import sequences
 
 LINEAGE_COL_NAME = 'lineage0'
-##### Sloppy comment-based configuration!!!!!
-# SEQID_COL = 'seqID'
-SEQID_COL = 'SEQUENCE_ID'
+
+def set_header_rev(header_rev):
+    ## Switch some global variables based on header rev
+    ## Could there be a better way to do this?
+    global id_col
+    global seq_col
+    global clone_col
+    global dmask_col
+    if header_rev == 0:
+        id_col = 'SEQUENCE_ID'
+        seq_col = 'SEQUENCE'
+        clone_col = 'CLONE'
+        dmask_col = 'GERMLINE_GAP_DMASK'
+    elif header_rev == 1:
+        id_col = 'seqID'
+        seq_col = 'sequence'
+        clone_col = 'cloneID'
+        dmask_col = 'germline'
+    else:
+        raise ValueError(
+            'You have selected an invalid header_rev: {:s}'.format(header_rev))
 
 class GermTree(ete2.coretype.tree.TreeNode):
     """
@@ -617,7 +635,7 @@ def _get_ete_treestyle():
 
 def _get_node_entry(nodename, lst_dict_entries):
     for dict_entry in lst_dict_entries:
-        if dict_entry[SEQID_COL][-9:] == nodename:
+        if dict_entry[id_col][-9:] == nodename:
             return dict_entry
         else: continue
     raise ValueError('Nodename {name} not found'.format(name=nodename))
@@ -751,7 +769,19 @@ def _treeviz_main():
             counts.
             """,
             )
+    parser.add_argument('--header',
+            dest='header',
+            default=1,
+            type=int,
+            help="""
+            If specified, one can change the version of headers to use.
+            Old-style headers are 0, new-style headers are 1 (default).
+            """,
+            )
     argspace = parser.parse_args()
+    ## Choose which column names to use for PHY file based on header
+    ## rev.
+    set_header_rev(argspace.header)
     print('''Using the following files as tab files''')
     for fname in argspace.tabfile:
         print(fname)
