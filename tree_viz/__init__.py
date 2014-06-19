@@ -686,13 +686,12 @@ def _treeviz_main():
             # dest='treefile',
         )
     parser.add_argument('-t', '--tabfile', dest='tabfile',
-            action='append',
+            nargs='*',
             help="""
             Provide a TAB file which should contain all of the relevant
             information about each sequence in the tree, especially the
             columns specified by COLOR_GROUP and COPY_NUMBER.
-            Multiple TAB files can be provided by using this argument
-            multiple times.
+            Multiple TAB files can be provided.
             """,
             )
     parser.add_argument('-r', '--render', dest='outfile', default=None,
