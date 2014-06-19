@@ -19,7 +19,6 @@ except ImportError as exc:
                 right python.''')
 
 import fasta2tab
-import sequences
 
 LINEAGE_COL_NAME = 'lineage0'
 
