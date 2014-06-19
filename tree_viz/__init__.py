@@ -241,7 +241,8 @@ class GermTree(ete2.coretype.tree.TreeNode):
         # Remove a node's parent iff the node's branch length is 0 and the
         # parent's name is 'NoName', that way we avoid removing named, and
         # thus possibly informative, nodes.
-        if node.dist == 0 and node.up.name == 'NoName':
+        if (node.dist == 0 and hasattr(node.up, 'name') and
+            node.up.name == 'NoName'):
             parent = node.up
             # grandparent = parent.up
             # node.detach()
