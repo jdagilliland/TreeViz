@@ -424,9 +424,11 @@ class GermTree(ete2.coretype.tree.TreeNode):
         correct_lengths = kwarg.pop('correct_lengths', False)
         # if true, display legend, else not
         legend = kwarg.pop('legend', True)
+        # if true, display node names, else not
+        shownames = kwarg.pop('shownames', True)
 
         tree = cls(fname)
-        tree.ete_treestyle = _get_ete_treestyle()
+        tree.ete_treestyle = _get_ete_treestyle(shownames=shownames)
         tree.set_phyfile(phyfile)
         tree.set_tabfile(tabfile)
         tree.root_tree()
@@ -488,6 +490,9 @@ class GermTree(ete2.coretype.tree.TreeNode):
 
     @staticmethod
     def _internal_layout(node):
+        # This function is currently used ONLY to draw the name on a node,
+        # that way it can be specified or not depending on the user's
+        # preference.
         if node.is_leaf():
             # If terminal node, draws its name
             name_face = ete2.AttrFace("name")
@@ -570,7 +575,7 @@ def _scale_size(size,
         size = int(basesize * size)
     return size
 
-def _get_ete_treestyle():
+def _get_ete_treestyle(shownames=True):
     """
     Returns an ete2 treestyle.
 
@@ -590,7 +595,9 @@ def _get_ete_treestyle():
     # circular layout
     ete_treestyle.mode = 'c'
     # custom layout function to be used on each node
-    ete_treestyle.layout_fn = GermTree._internal_layout
+    # currently it just prints the name
+    if shownames:
+        ete_treestyle.layout_fn = GermTree._internal_layout
     # place legend in top-left
     ete_treestyle.legend_position = 1
     return ete_treestyle
@@ -736,6 +743,12 @@ def _treeviz_main():
             Do not display the legend.
             """,
             )
+    parser.add_argument('--no-names', dest='shownames',
+            action='store_false',
+            help="""
+            Do not display the node names.
+            """,
+            )
     parser.add_argument('--header',
             dest='header',
             default=1,
@@ -762,6 +775,7 @@ def _treeviz_main():
         display=argspace.display,
         correct_lengths=argspace.correct_lengths,
         legend=argspace.legend,
+        shownames=argspace.shownames,
         )
     return None
 
