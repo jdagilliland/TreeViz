@@ -653,22 +653,12 @@ def _treeviz_main():
             Multiple TAB files can be provided.
             """,
             )
-    parser.add_argument('-r', '--render', dest='outfile', default=None,
+    parser.add_argument('-p', '--phy-file',
+            dest='phyfile',
             help="""
-            If provided, render the graphical tree as a file.
-            This option can be provided instead of showing the tree
-            interactively.
-            In future versions, this option may be able to be provided
-            in addition to interactively displaying the tree.
-            """,
-            )
-    parser.add_argument('-n', '--no-display', dest='display',
-            action='store_false',
-            help="""
-            Use if you do not actually want to display the tree.
-            This option is only useful if you are performing subtree
-            analyses, because otherwise the whole point is to display
-            the tree.
+            The PHY file to use to set the length of the sequences, as
+            well as the root node, which is assumed to be the first
+            sequence found in the PHY file.
             """,
             )
     parser.add_argument('-c', '--color-column',
@@ -696,12 +686,22 @@ def _treeviz_main():
             label for the COPY_NUMBER column. (default: COPY_NUMBER)
             """,
             )
-    parser.add_argument('-p', '--phy-file',
-            dest='phyfile',
+    parser.add_argument('-r', '--render', dest='outfile', default=None,
             help="""
-            The PHY file to use to set the length of the sequences, as
-            well as the root node, which is assumed to be the first
-            sequence found in the PHY file.
+            If provided, render the graphical tree as a file.
+            This option can be provided instead of showing the tree
+            interactively.
+            In future versions, this option may be able to be provided
+            in addition to interactively displaying the tree.
+            """,
+            )
+    parser.add_argument('-n', '--no-display', dest='display',
+            action='store_false',
+            help="""
+            Use if you do not actually want to display the tree.
+            This option is only useful if you are performing subtree
+            analyses, because otherwise the whole point is to display
+            the tree.
             """,
             )
     parser.add_argument('-o', '--output-dir',
