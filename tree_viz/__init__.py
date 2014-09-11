@@ -586,6 +586,9 @@ def _get_ete_treestyle(shownames=True):
     ete_treestyle = ete2.TreeStyle()
     # do not use branch lengths to influence graphical branch lengths
     ete_treestyle.force_topology = True
+    # it doesn't make any sense to show a scale bar when forcing
+    # topology
+    ete_treestyle.show_scale = not ete_treestyle.force_topology
     # do not rotate, this makes navigation weird
     ete_treestyle.rotation = 0
     # show the branch lengths
