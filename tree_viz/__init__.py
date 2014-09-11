@@ -422,6 +422,8 @@ class GermTree(ete2.coretype.tree.TreeNode):
         display = kwarg.pop('display', True)
         # print(outputdir)
         correct_lengths = kwarg.pop('correct_lengths', False)
+        # if true, display legend, else not
+        legend = kwarg.pop('legend', True)
 
         tree = cls(fname)
         tree.ete_treestyle = _get_ete_treestyle()
@@ -443,9 +445,10 @@ class GermTree(ete2.coretype.tree.TreeNode):
         tree.collapse_null_branches()
         if outputdir:
             tree.analyze_tree(outputdir)
-        # show filename
-        tree.ete_treestyle.title.add_face(ete2.TextFace(fname), column=0)
-        _add_legend(tree.ete_treestyle, tree.dict_color)
+        if legend:
+            # show filename
+            tree.ete_treestyle.title.add_face(ete2.TextFace(fname), column=0)
+            _add_legend(tree.ete_treestyle, tree.dict_color)
         # if outfile specified, use, otherwise just show
         outfile = kwarg.pop('outfile',None)
         if outfile:
@@ -727,6 +730,12 @@ def _treeviz_main():
             counts.
             """,
             )
+    parser.add_argument('--no-legend', dest='legend',
+            action='store_false',
+            help="""
+            Do not display the legend.
+            """,
+            )
     parser.add_argument('--header',
             dest='header',
             default=1,
@@ -752,6 +761,7 @@ def _treeviz_main():
         outputdir=argspace.outputdir,
         display=argspace.display,
         correct_lengths=argspace.correct_lengths,
+        legend=argspace.legend,
         )
     return None
 
