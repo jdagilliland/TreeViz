@@ -300,7 +300,7 @@ class GermTree(ete2.coretype.tree.TreeNode):
             size_column=None,
             dict_color=None,
             len_seq=1,
-            ):
+            **kwarg):
         """
         Color nodes of `tree` according to data in `tabfile`.
 
@@ -324,6 +324,8 @@ class GermTree(ete2.coretype.tree.TreeNode):
         len_seq : int, optional
             The integer length of the sequences represented by this tree.
             (default: 1)
+        logscale : bool, optional
+        areascale : bool, optional
 
         Returns
         -------
@@ -334,6 +336,8 @@ class GermTree(ete2.coretype.tree.TreeNode):
             correlate colors on the plot with the values they color.
 
         """
+        logscale = kwarg.pop('logscale', True)
+        areascale = kwarg.pop('areascale', False)
         if dict_color == None:
             _data = [entry.get(color_column) for entry in
                     self.lst_dict_tab_entries]
@@ -365,7 +369,11 @@ class GermTree(ete2.coretype.tree.TreeNode):
             # set node style
             style = ete2.NodeStyle()
             style['fgcolor'] = color
-            style['size'] = _scale_size(int(size))
+            style['size'] = _scale_size(
+                    int(size),
+                    logscale=logscale,
+                    areascale=areascale,
+                    )
             node.set_style(style)
             # scale distance to represent mutation length
         return dict_color
@@ -426,6 +434,9 @@ class GermTree(ete2.coretype.tree.TreeNode):
         legend = kwarg.pop('legend', True)
         # if true, display node names, else not
         shownames = kwarg.pop('shownames', True)
+        # A few options for how to process size
+        logscale = kwarg.pop('logscale', True)
+        areascale = kwarg.pop('areascale', False)
 
         tree = cls(fname)
         tree.ete_treestyle = _get_ete_treestyle(shownames=shownames)
@@ -443,6 +454,8 @@ class GermTree(ete2.coretype.tree.TreeNode):
                 color_column=color_column,
                 size_column=size_column,
                 len_seq=tree.len_seq,
+                logscale=logscale,
+                areascale=areascale,
                 )
         tree.collapse_null_branches()
         if outputdir:
@@ -558,6 +571,9 @@ def _scale_size(size,
         Boolean whether or not to log scale.
         Set `False` to leave in linear scale.
         (default: `True`)
+    areascale : bool, optional
+        Boolean whether or not to scale area as opposed to linear size.
+        (default: `False`)
     basesize : float, optional
         The size of a node with representing a single copy number clone.
         (default: 20)
@@ -569,6 +585,9 @@ def _scale_size(size,
     """
     logscale = kwarg.pop('logscale', True)
     basesize = kwarg.pop('basesize', 20)
+    areascale = kwarg.pop('areascale', False)
+    if areascale:
+        size = np.sqrt(size)
     if logscale:
         size = int(basesize * (1 + np.log(size)))
     else:
@@ -699,6 +718,19 @@ def _treeviz_main():
             label for the COPY_NUMBER column. (default: COPY_NUMBER)
             """,
             )
+    parser.add_argument('-A', '--area-scale', dest='areascale',
+            action='store_true',
+            help="""
+            Whether to scale node sizes to area rather than
+            diameter.
+            """,
+            )
+    parser.add_argument('-i', '--linear-scale', dest='logscale',
+            action='store_false',
+            help="""
+            Whether to scale node sizes linearly by copy number.
+            """,
+            )
     parser.add_argument('-r', '--render', dest='outfile', default=None,
             help="""
             If provided, render the graphical tree as a file.
@@ -779,6 +811,8 @@ def _treeviz_main():
         correct_lengths=argspace.correct_lengths,
         legend=argspace.legend,
         shownames=argspace.shownames,
+        logscale=argspace.logscale,
+        areascale=argspace.areascale,
         )
     return None
 
